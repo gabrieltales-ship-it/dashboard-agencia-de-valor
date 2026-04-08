@@ -1,0 +1,13 @@
+# Tokens e credenciais — NUNCA subir para o GitHub
+.env
+.env.local
+*.json.key
+google-credentials.json
+
+# Sistema
+.DS_Store
+node_modules/
+.vercel/
+
+# Arquivo antigo do projeto
+dashboard_meta_ads_v3.html .:index.html

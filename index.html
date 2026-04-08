@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard de Performance — Agência de Valor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --av-bg: #121212;
+      --av-surface: #1a1a1a;
+      --av-border: #333333;
+      --av-wm-fill: #2a2a2a;
+      --av-text-primary: #f4f4f4;
+      --av-text-secondary: #c1c1c1;
+      --av-text-muted: #666666;
+      --av-gradient-cta: linear-gradient(90deg, #FC8338 0%, #FF4A4A 100%);
+      --av-gradient-text: linear-gradient(90deg, #eb5d5d, #ffa01a);
+      --av-font: 'Figtree', sans-serif;
+      --av-radius-btn: 6px;
+      --av-radius-md: 8px;
+      --av-radius-lg: 12px;
+      --av-radius-xl: 16px;
+      --av-success-bg: #1a3a1a;
+      --av-success-text: #4ade80;
+      --av-warning-bg: #3a2a10;
+      --av-warning-text: #fb923c;
+      --av-danger-bg: #3a1a1a;
+      --av-danger-text: #f87171;
+      --av-info-bg: #1a2a3a;
+      --av-info-text: #60a5fa;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--av-bg);
+      font-family: var(--av-font);
+      color: var(--av-text-primary);
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    .av-header {
+      background: var(--av-surface);
+      border-bottom: 1px solid var(--av-border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .av-logo {
+      width: 36px;
+      height: 36px;
+      background: var(--av-gradient-cta);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+      letter-spacing: -0.5px;
+    }
+    .av-brand-name {
+      font-size: 17px;
+      font-weight: 700;
+      background: var(--av-gradient-text);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.2;
+    }
+    .av-brand-sub {
+      font-size: 11px;
+      color: var(--av-text-muted);
+      margin-top: 1px;
+    }
+
+    /* ── DASHBOARD SHELL ── */
+    .dash {
+      background: var(--av-bg);
+      padding: 16px 20px;
+      font-family: var(--av-font);
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .topbar h1 {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--av-text-secondary);
+      letter-spacing: 0.01em;
+    }
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: var(--av-gradient-cta);
+      color: #fff;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .updated {
+      font-size: 11px;
+      color: var(--av-text-muted);
+    }
+
+    .period-select {
+      font-size: 12px;
+      padding: 5px 10px;
+      border-radius: var(--av-radius-btn);
+      border: 1px solid var(--av-border);
+      background: var(--av-surface);
+      color: var(--av-text-primary);
+      cursor: pointer;
+      outline: none;
+      font-family: var(--av-font);
+    }
+    .period-select:focus {
+      border-color: #FC8338;
+    }
+
+    /* ── TABS ── */
+    .tabs {
+      display: flex;
+      gap: 2px;
+      border-bottom: 1px solid var(--av-border);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+
+    .tab {
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--av-text-muted);
+      border: 1px solid transparent;
+      border-bottom: none;
+      border-radius: 6px 6px 0 0;
+      background: transparent;
+      white-space: nowrap;
+      transition: all .15s;
+      font-family: var(--av-font);
+      position: relative;
+    }
+    .tab:hover {
+      background: var(--av-wm-fill);
+      color: var(--av-text-secondary);
+    }
+    .tab.active {
+      background: var(--av-surface);
+      color: var(--av-text-primary);
+      border-color: var(--av-border);
+      margin-bottom: -1px;
+    }
+    .tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--av-gradient-cta);
+      border-radius: 2px 2px 0 0;
+    }
+
+    /* ── PANELS ── */
+    .panel { display: none; padding-top: 14px; }
+    .panel.active { display: block; }
+
+    /* ── CARDS ── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .card {
+      background: var(--av-surface);
+      border-radius: var(--av-radius-md);
+      padding: 12px 14px;
+      border: 1px solid var(--av-border);
+    }
+    .card-label {
+      font-size: 11px;
+      color: var(--av-text-secondary);
+      margin-bottom: 5px;
+      line-height: 1.3;
+    }
+    .card-value {
+      font-size: 19px;
+      font-weight: 600;
+      color: var(--av-text-primary);
+      line-height: 1.2;
+    }
+    .card-sub {
+      font-size: 10px;
+      color: var(--av-text-muted);
+      margin-top: 3px;
+    }
+    .card.crm-card {
+      border: 1px dashed var(--av-border);
+      background: var(--av-bg);
+    }
+
+    /* ── SECTIONS ── */
+    .section {
+      background: var(--av-surface);
+      border: 1px solid var(--av-border);
+      border-radius: var(--av-radius-lg);
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--av-text-primary);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* ── CHARTS ── */
+    .chart-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .chart-box {
+      background: var(--av-surface);
+      border: 1px solid var(--av-border);
+      border-radius: var(--av-radius-lg);
+      padding: 14px;
+    }
+    .chart-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--av-text-primary);
+      margin-bottom: 10px;
+    }
+
+    /* ── TABLES ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      table-layout: fixed;
+    }
+    th {
+      text-align: left;
+      padding: 5px 7px;
+      color: var(--av-text-secondary);
+      font-weight: 600;
+      border-bottom: 1px solid var(--av-border);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-family: var(--av-font);
+    }
+    td {
+      padding: 5px 7px;
+      color: var(--av-text-primary);
+      border-bottom: 1px solid var(--av-border);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--av-wm-fill); }
+
+    /* ── BUDGET BADGE ── */
+    .budget-total {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--av-text-primary);
+      background: var(--av-wm-fill);
+      padding: 3px 10px;
+      border-radius: var(--av-radius-md);
+      border: 1px solid var(--av-border);
+    }
+
+    /* ── FUNNEL ── */
+    .funnel-wrap { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; }
+    .funnel-stage { width: 100%; display: flex; align-items: center; gap: 8px; }
+    .funnel-bar-wrap { flex: 1; height: 34px; display: flex; align-items: center; }
+    .funnel-bar { height: 34px; border-radius: 4px; display: flex; align-items: center; padding: 0 12px; min-width: 60px; }
+    .funnel-bar span { font-size: 12px; font-weight: 600; color: #fff; white-space: nowrap; }
+    .funnel-label { font-size: 11px; color: var(--av-text-secondary); width: 120px; text-align: right; flex-shrink: 0; }
+    .funnel-pct { font-size: 11px; width: 80px; flex-shrink: 0; padding-left: 8px; }
+
+    /* ── STATUS BADGES ── */
+    .badge-best {
+      display: inline-block;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      background: var(--av-success-bg);
+      color: var(--av-success-text);
+      margin-left: 4px;
+    }
+    .badge-warn {
+      display: inline-block;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      background: var(--av-warning-bg);
+      color: var(--av-warning-text);
+      margin-left: 4px;
+    }
+    .badge-bad {
+      display: inline-block;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      background: var(--av-danger-bg);
+      color: var(--av-danger-text);
+      margin-left: 4px;
+    }
+    .manual-badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: var(--av-warning-bg);
+      color: var(--av-warning-text);
+      border: 1px solid var(--av-border);
+    }
+
+    /* ── SUB-TABS ── */
+    .sub-tabs { display: flex; gap: 4px; margin-bottom: 10px; }
+    .sub-tab {
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 20px;
+      color: var(--av-text-secondary);
+      border: 1px solid var(--av-border);
+      background: transparent;
+      transition: all .15s;
+      font-family: var(--av-font);
+    }
+    .sub-tab:hover { background: var(--av-wm-fill); }
+    .sub-tab.active {
+      background: var(--av-info-bg);
+      color: var(--av-info-text);
+      border-color: transparent;
+    }
+    .sub-panel { display: none; }
+    .sub-panel.active { display: block; }
+
+    /* ── RANK ── */
+    .rank-num {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      font-size: 10px;
+      font-weight: 600;
+      text-align: center;
+      line-height: 18px;
+      margin-right: 4px;
+      flex-shrink: 0;
+    }
+    .rank-1 { background: #3a2a10; color: #fb923c; }
+    .rank-2 { background: var(--av-wm-fill); color: var(--av-text-secondary); }
+    .rank-3 { background: #3a1a1a; color: #f87171; }
+
+    /* ── CRM PLACEHOLDER ── */
+    .crm-placeholder {
+      background: var(--av-surface);
+      border: 1px dashed var(--av-border);
+      border-radius: var(--av-radius-lg);
+      padding: 32px;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    .crm-placeholder p {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--av-text-secondary);
+      margin-bottom: 6px;
+    }
+    .crm-placeholder span {
+      font-size: 12px;
+      color: var(--av-text-muted);
+    }
+
+    .demo-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    /* ── REFRESH BUTTON ── */
+    .btn-refresh {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: var(--av-radius-btn);
+      border: 1px solid #FC8338;
+      background: transparent;
+      color: #FC8338;
+      cursor: pointer;
+      font-family: var(--av-font);
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .btn-refresh:hover {
+      background: rgba(252,131,56,0.12);
+    }
+    .btn-refresh.loading {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* ── CUSTOM DATE RANGE ── */
+    .custom-range {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .custom-range.visible { display: flex; }
+    .custom-range label { font-size: 11px; color: var(--av-text-muted); }
+    .custom-range input[type="date"] {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: var(--av-radius-btn);
+      border: 1px solid var(--av-border);
+      background: var(--av-surface);
+      color: var(--av-text-primary);
+      font-family: var(--av-font);
+      outline: none;
+      cursor: pointer;
+    }
+    .custom-range input[type="date"]:focus { border-color: #FC8338; }
+    .custom-range input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(0.6);
+      cursor: pointer;
+    }
+    .btn-apply-range {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: var(--av-radius-btn);
+      border: none;
+      background: var(--av-gradient-cta);
+      color: #fff;
+      cursor: pointer;
+      font-family: var(--av-font);
+    }
+
+    /* ── CARDS EM DUAS FILEIRAS (Meta + CRM) ── */
+    .cards-group { margin-bottom: 14px; }
+    .cards-row-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 4px 2px 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .cards-row-label.meta { color: #60a5fa; }
+    .cards-row-label.crm  { color: var(--av-warning-text); margin-top: 10px; }
+    .cards-row-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--av-border);
+    }
+
+    /* ── RECEITA CARD destaque ── */
+    .card.receita-card {
+      border: 1px solid rgba(252,131,56,0.4);
+      background: rgba(252,131,56,0.06);
+    }
+    .card.receita-card .card-label { color: #FC8338; }
+    .card.receita-card .card-value { color: #FC8338; }
+  </style>
+</head>
+<body>
+
+<!-- ── BRANDED HEADER ── -->
+<header class="av-header">
+  <div class="av-logo">AV</div>
+  <div>
+    <div class="av-brand-name">Agência de Valor</div>
+    <div class="av-brand-sub">Dashboard de Performance</div>
+  </div>
+</header>
+
+<!-- ── DASHBOARD ── -->
+<div class="dash">
+
+  <div class="topbar">
+    <h1>Visão consolidada de campanhas</h1>
+    <div class="topbar-right">
+      <select class="period-select" id="globalPeriod" onchange="onPeriodChange(this.value)">
+        <option value="7">Últimos 7 dias</option>
+        <option value="14">Últimos 14 dias</option>
+        <option value="30" selected>Últimos 30 dias</option>
+        <option value="month">Este mês</option>
+        <option value="year" id="opt-year">Este ano</option>
+        <option value="custom">Personalizado</option>
+      </select>
+      <div class="custom-range" id="customRange">
+        <label>De</label>
+        <input type="date" id="dateFrom">
+        <label>até</label>
+        <input type="date" id="dateTo">
+        <button class="btn-apply-range" onclick="applyCustomRange()">Aplicar</button>
+      </div>
+      <span class="badge">● Ao vivo</span>
+      <button class="btn-refresh" id="btnRefresh" onclick="refreshDash()">↻ Atualizar Dash</button>
+      <span class="updated" id="lastUpdate">—</span>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('apl',this)">Aplicação</div>
+    <div class="tab" onclick="showTab('web',this)">Webinário</div>
+    <div class="tab" onclick="showTab('soc',this)">Social Selling</div>
+    <div class="tab" onclick="showTab('ger',this)">Visão Geral + CRM</div>
+  </div>
+
+  <!-- ===== ABA APLICAÇÃO ===== -->
+  <div class="panel active" id="apl">
+    <div class="cards-group" id="apl-cards">
+      <!-- Fileira 1: dados do Meta Ads -->
+      <div class="cards-row-label meta">Meta Ads</div>
+      <div class="cards">
+        <div class="card"><div class="card-label">Valor gasto</div><div class="card-value" id="apl-spend">R$ 18.420</div><div class="card-sub">campanhas "Sessão"</div></div>
+        <div class="card"><div class="card-label">Leads</div><div class="card-value" id="apl-leads">342</div><div class="card-sub">rastreado pelo pixel</div></div>
+        <div class="card"><div class="card-label">MQLs</div><div class="card-value" id="apl-mqls">87</div><div class="card-sub">evento customizado</div></div>
+        <div class="card"><div class="card-label">CPL</div><div class="card-value" id="apl-cpl">R$ 53,8</div><div class="card-sub">Meta ÷ leads Meta</div></div>
+        <div class="card"><div class="card-label">Custo/MQL</div><div class="card-value" id="apl-cpmql">R$ 211,7</div><div class="card-sub">Meta ÷ MQLs Meta</div></div>
+      </div>
+      <!-- Fileira 2: dados do CRM (sem tag KOMMO / WEBINARIO) -->
+      <div class="cards-row-label crm">CRM — Pipedrive <span style="font-size:9px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--av-text-muted)">(excl. tags KOMMO e WEBINÁRIO)</span></div>
+      <div class="cards">
+        <div class="card crm-card"><div class="card-label">Leads</div><div class="card-value">318</div><div class="card-sub">CPL CRM: R$ 57,9</div></div>
+        <div class="card crm-card"><div class="card-label">MQLs</div><div class="card-value">82</div><div class="card-sub">Custo/MQL: R$ 224,6</div></div>
+        <div class="card crm-card"><div class="card-label">Calls agendadas</div><div class="card-value">54</div><div class="card-sub">R$ 341/call</div></div>
+        <div class="card crm-card"><div class="card-label">Calls realizadas</div><div class="card-value">38</div><div class="card-sub">R$ 484/call</div></div>
+        <div class="card crm-card"><div class="card-label">Vendas</div><div class="card-value">12</div><div class="card-sub">CAC R$ 1.535</div></div>
+        <div class="card crm-card"><div class="card-label">ROAS</div><div class="card-value">4,2x</div></div>
+        <div class="card receita-card"><div class="card-label">Receita</div><div class="card-value">R$ 77.364</div><div class="card-sub">negócios fechados</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Funil — Aplicação</div>
+      <div class="funnel-wrap" id="funnel-apl"></div>
+    </div>
+
+    <div class="chart-row">
+      <div class="chart-box"><div class="chart-title">Spend diário</div><canvas id="ca-spend" height="140"></canvas></div>
+      <div class="chart-box"><div class="chart-title">Leads e MQLs diários</div><canvas id="ca-leads" height="140"></canvas></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Campanhas — Sessão <span class="budget-total">Orçamento total: R$ 1.240/dia</span></div>
+      <table>
+        <thead><tr><th style="width:30%">Campanha</th><th>Orç./dia</th><th>Spend</th><th>Leads</th><th>MQLs</th><th>CPL</th><th>CPMQL</th></tr></thead>
+        <tbody>
+          <tr><td>Sessão Estratégica - Topo</td><td>R$ 560</td><td>R$ 7.840</td><td>148</td><td>38</td><td>R$ 52,9<span class="badge-best">top</span></td><td>R$ 206</td></tr>
+          <tr><td>Sessão Premium - Retarg.</td><td>R$ 420</td><td>R$ 5.920</td><td>112</td><td>31</td><td>R$ 52,8<span class="badge-best">top</span></td><td>R$ 191</td></tr>
+          <tr><td>Sessão VIP - Lookalike</td><td>R$ 260</td><td>R$ 4.660</td><td>82</td><td>18</td><td>R$ 56,8<span class="badge-warn">alto</span></td><td>R$ 259</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Análise de performance — ordem: menor CPL <span id="apl-period-badge" class="manual-badge">Últimos 30 dias</span></div>
+      <div class="sub-tabs">
+        <div class="sub-tab active" onclick="showSub('apl-perf','apl-camp',this)">Campanhas</div>
+        <div class="sub-tab" onclick="showSub('apl-perf','apl-conj',this)">Conjuntos</div>
+        <div class="sub-tab" onclick="showSub('apl-perf','apl-criat',this)">Criativos</div>
+      </div>
+      <div id="apl-perf">
+        <div class="sub-panel active" id="apl-camp">
+          <table><thead><tr><th style="width:3%">#</th><th style="width:30%">Campanha</th><th>Spend</th><th>Leads</th><th>CPL</th><th>vs. média</th><th>Ação</th></tr></thead>
+          <tbody id="apl-camp-body"></tbody></table>
+        </div>
+        <div class="sub-panel" id="apl-conj">
+          <table><thead><tr><th style="width:3%">#</th><th style="width:30%">Conjunto</th><th>Spend</th><th>Leads</th><th>CPL</th><th>vs. média</th><th>Ação</th></tr></thead>
+          <tbody id="apl-conj-body"></tbody></table>
+        </div>
+        <div class="sub-panel" id="apl-criat">
+          <table><thead><tr><th style="width:3%">#</th><th style="width:30%">Criativo</th><th>Spend</th><th>Leads</th><th>CPL</th><th>vs. média</th><th>Ação</th></tr></thead>
+          <tbody id="apl-criat-body"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-row">
+      <div class="chart-box"><div class="chart-title">CPL por faixa etária</div><canvas id="ca-age" height="160"></canvas></div>
+      <div class="chart-box"><div class="chart-title">Spend e CPL por gênero</div><canvas id="ca-gender" height="160"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ===== ABA WEBINÁRIO ===== -->
+  <div class="panel" id="web">
+    <div class="cards">
+      <div class="card"><div class="card-label">Valor gasto</div><div class="card-value">R$ 9.150</div><div class="card-sub">campanhas "web"</div></div>
+      <div class="card"><div class="card-label">Leads</div><div class="card-value">1.247</div></div>
+      <div class="card"><div class="card-label">CPL</div><div class="card-value">R$ 7,3</div></div>
+      <div class="card crm-card" style="border-color:#FC8338"><div class="card-label">Presentes <span class="manual-badge">manual</span></div><div class="card-value">389</div><div class="card-sub">31,2% dos leads</div></div>
+      <div class="card crm-card"><div class="card-label">Calls agendadas</div><div class="card-value">74</div><div class="card-sub">R$ 123/call</div></div>
+      <div class="card crm-card"><div class="card-label">Calls realizadas</div><div class="card-value">51</div><div class="card-sub">R$ 179/call</div></div>
+      <div class="card crm-card"><div class="card-label">Vendas</div><div class="card-value">18</div><div class="card-sub">CAC R$ 508</div></div>
+      <div class="card crm-card"><div class="card-label">ROAS</div><div class="card-value">6,1x</div></div>
+      <div class="card receita-card"><div class="card-label">Receita <span class="manual-badge" style="color:var(--av-warning-text)">Pipedrive</span></div><div class="card-value">R$ 55.815</div><div class="card-sub">soma dos negócios fechados</div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Funil — Webinário <span class="manual-badge">presentes via planilha</span></div>
+      <div class="funnel-wrap" id="funnel-web"></div>
+    </div>
+
+    <div class="chart-row">
+      <div class="chart-box"><div class="chart-title">Spend diário</div><canvas id="cw-spend" height="140"></canvas></div>
+      <div class="chart-box"><div class="chart-title">Leads diários</div><canvas id="cw-leads" height="140"></canvas></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Campanhas — Web <span class="budget-total">Orçamento total: R$ 620/dia</span></div>
+      <table>
+        <thead><tr><th style="width:28%">Campanha</th><th>Orç./dia</th><th>Spend</th><th>Leads</th><th>CPL</th><th>CTR</th><th>Impressões</th></tr></thead>
+        <tbody>
+          <tr><td>Web - Topo Frio</td><td>R$ 280</td><td>R$ 4.200</td><td>612</td><td>R$ 6,8<span class="badge-best">top</span></td><td>2,1%</td><td>142.000</td></tr>
+          <tr><td>Web - Remarketing</td><td>R$ 220</td><td>R$ 3.100</td><td>480</td><td>R$ 6,4<span class="badge-best">top</span></td><td>3,4%</td><td>98.000</td></tr>
+          <tr><td>Web - Lookalike 3%</td><td>R$ 120</td><td>R$ 1.850</td><td>155</td><td>R$ 11,9<span class="badge-warn">alto</span></td><td>1,8%</td><td>67.000</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Análise de performance — ordem: menor CPL <span id="web-period-badge" class="manual-badge">Últimos 30 dias</span></div>
+      <div class="sub-tabs">
+        <div class="sub-tab active" onclick="showSub('web-perf','web-camp',this)">Campanhas</div>
+        <div class="sub-tab" onclick="showSub('web-perf','web-conj',this)">Conjuntos</div>
+        <div class="sub-tab" onclick="showSub('web-perf','web-criat',this)">Criativos</div>
+      </div>
+      <div id="web-perf">
+        <div class="sub-panel active" id="web-camp"><table><thead><tr><th style="width:3%">#</th><th style="width:30%">Campanha</th><th>Spend</th><th>Leads</th><th>CPL</th><th>vs. média</th><th>Ação</th></tr></thead><tbody id="web-camp-body"></tbody></table></div>
+        <div class="sub-panel" id="web-conj"><table><thead><tr><th style="width:3%">#</th><th style="width:30%">Conjunto</th><th>Spend</th><th>Leads</th><th>CPL</th><th>vs. média</th><th>Ação</th></tr></thead><tbody id="web-conj-body"></tbody></table></div>
+        <div class="sub-panel" id="web-criat"><table><thead><tr><th style="width:3%">#</th><th style="width:30%">Criativo</th><th>Spend</th><th>Leads</th><th>CPL</th><th>vs. média</th><th>Ação</th></tr></thead><tbody id="web-criat-body"></tbody></table></div>
+      </div>
+    </div>
+
+    <div class="demo-row">
+      <div class="chart-box"><div class="chart-title">CPL por faixa etária</div><canvas id="cw-age" height="160"></canvas></div>
+      <div class="chart-box"><div class="chart-title">Spend e CPL por gênero</div><canvas id="cw-gender" height="160"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ===== ABA SOCIAL SELLING ===== -->
+  <div class="panel" id="soc">
+    <div class="cards">
+      <div class="card"><div class="card-label">Valor gasto</div><div class="card-value">R$ 4.280</div><div class="card-sub">campanhas "Tráfego"</div></div>
+      <div class="card"><div class="card-label">Novos seguidores</div><div class="card-value">2.841</div><div class="card-sub">métrica nativa Meta</div></div>
+      <div class="card"><div class="card-label">Custo/seguidor</div><div class="card-value">R$ 1,5</div></div>
+      <div class="card crm-card" style="border-color:#FC8338"><div class="card-label">Abordados <span class="manual-badge">manual</span></div><div class="card-value">420</div><div class="card-sub">14,8% dos seguidores</div></div>
+      <div class="card crm-card"><div class="card-label">Calls agendadas</div><div class="card-value">31</div><div class="card-sub">R$ 138/call</div></div>
+      <div class="card crm-card"><div class="card-label">Calls realizadas</div><div class="card-value">22</div><div class="card-sub">R$ 194/call</div></div>
+      <div class="card crm-card"><div class="card-label">Vendas</div><div class="card-value">7</div><div class="card-sub">CAC R$ 611</div></div>
+      <div class="card crm-card"><div class="card-label">ROAS</div><div class="card-value">3,8x</div></div>
+      <div class="card receita-card"><div class="card-label">Receita <span class="manual-badge" style="color:var(--av-warning-text)">Pipedrive</span></div><div class="card-value">R$ 16.264</div><div class="card-sub">soma dos negócios fechados</div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Funil — Social Selling <span class="manual-badge">abordados via planilha</span></div>
+      <div class="funnel-wrap" id="funnel-soc"></div>
+    </div>
+
+    <div class="chart-row">
+      <div class="chart-box"><div class="chart-title">Novos seguidores por dia</div><canvas id="cs-seg" height="140"></canvas></div>
+      <div class="chart-box"><div class="chart-title">Custo/seguidor ao longo do tempo</div><canvas id="cs-cps" height="140"></canvas></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Campanhas — Tráfego <span class="budget-total">Orçamento total: R$ 290/dia</span></div>
+      <table>
+        <thead><tr><th style="width:28%">Campanha</th><th>Orç./dia</th><th>Spend</th><th>Seguidores</th><th>Custo/seg.</th><th>Alcance</th></tr></thead>
+        <tbody>
+          <tr><td>Tráfego - Instagram</td><td>R$ 185</td><td>R$ 2.800</td><td>1.920</td><td>R$ 1,45<span class="badge-best">top</span></td><td>84.000</td></tr>
+          <tr><td>Tráfego - Facebook</td><td>R$ 105</td><td>R$ 1.480</td><td>921</td><td>R$ 1,60<span class="badge-warn">alto</span></td><td>52.000</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Análise de performance — ordem: menor custo/seguidor <span id="soc-period-badge" class="manual-badge">Últimos 30 dias</span></div>
+      <div class="sub-tabs">
+        <div class="sub-tab active" onclick="showSub('soc-perf','soc-camp',this)">Campanhas</div>
+        <div class="sub-tab" onclick="showSub('soc-perf','soc-conj',this)">Conjuntos</div>
+        <div class="sub-tab" onclick="showSub('soc-perf','soc-criat',this)">Criativos</div>
+      </div>
+      <div id="soc-perf">
+        <div class="sub-panel active" id="soc-camp"><table><thead><tr><th style="width:3%">#</th><th style="width:30%">Campanha</th><th>Spend</th><th>Seguidores</th><th>Custo/seg.</th><th>vs. média</th><th>Ação</th></tr></thead><tbody id="soc-camp-body"></tbody></table></div>
+        <div class="sub-panel" id="soc-conj"><table><thead><tr><th style="width:3%">#</th><th style="width:30%">Conjunto</th><th>Spend</th><th>Seguidores</th><th>Custo/seg.</th><th>vs. média</th><th>Ação</th></tr></thead><tbody id="soc-conj-body"></tbody></table></div>
+        <div class="sub-panel" id="soc-criat"><table><thead><tr><th style="width:3%">#</th><th style="width:30%">Criativo</th><th>Spend</th><th>Seguidores</th><th>Custo/seg.</th><th>vs. média</th><th>Ação</th></tr></thead><tbody id="soc-criat-body"></tbody></table></div>
+      </div>
+    </div>
+
+    <div class="demo-row">
+      <div class="chart-box"><div class="chart-title">Custo/seguidor por faixa etária</div><canvas id="cs-age" height="160"></canvas></div>
+      <div class="chart-box"><div class="chart-title">Spend e custo/seguidor por gênero</div><canvas id="cs-gender" height="160"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ===== ABA GERAL + CRM ===== -->
+  <div class="panel" id="ger">
+    <div class="cards">
+      <div class="card"><div class="card-label">Total investido</div><div class="card-value">R$ 31.850</div><div class="card-sub">todos os funis</div></div>
+      <div class="card crm-card"><div class="card-label">Entradas no CRM</div><div class="card-value">1.521</div><div class="card-sub">leads Apl+Web+SS no Pipedrive</div></div>
+      <div class="card"><div class="card-label">CPL geral</div><div class="card-value">R$ 20,9</div><div class="card-sub">invest. ÷ entradas CRM</div></div>
+      <div class="card crm-card"><div class="card-label">Calls agendadas</div><div class="card-value">159</div><div class="card-sub">R$ 200/call</div></div>
+      <div class="card crm-card"><div class="card-label">Calls realizadas</div><div class="card-value">111</div><div class="card-sub">R$ 286/call</div></div>
+      <div class="card crm-card"><div class="card-label">Vendas totais</div><div class="card-value">37</div></div>
+      <div class="card crm-card"><div class="card-label">CAC médio</div><div class="card-value">R$ 860</div></div>
+      <div class="card crm-card"><div class="card-label">ROAS geral</div><div class="card-value">4,7x</div></div>
+      <div class="card receita-card"><div class="card-label">Receita total <span class="manual-badge" style="color:var(--av-warning-text)">Pipedrive</span></div><div class="card-value">R$ 149.443</div><div class="card-sub">todos os funis</div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Funil geral — Total de entradas → Vendas</div>
+      <div class="funnel-wrap" id="funnel-ger"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">CAC e ROAS por funil</div>
+      <table>
+        <thead><tr><th>Funil</th><th>Investido</th><th>Vendas</th><th>CAC</th><th>Receita est.</th><th>ROAS</th></tr></thead>
+        <tbody>
+          <tr><td>Aplicação</td><td>R$ 18.420</td><td>12</td><td>R$ 1.535</td><td>R$ 77.364</td><td>4,2x</td></tr>
+          <tr><td>Webinário</td><td>R$ 9.150</td><td>18</td><td>R$ 508</td><td>R$ 55.815</td><td>6,1x</td></tr>
+          <tr><td>Social Selling</td><td>R$ 4.280</td><td>7</td><td>R$ 611</td><td>R$ 16.264</td><td>3,8x</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="chart-row">
+      <div class="chart-box" style="max-width:340px"><div class="chart-title">Spend por funil</div><canvas id="cg-funis" height="100"></canvas></div>
+      <div class="chart-box" style="max-width:340px"><div class="chart-title">Leads/entradas por funil</div><canvas id="cg-leads" height="100"></canvas></div>
+    </div>
+
+    <div class="crm-placeholder">
+      <p>Integração com Pipedrive</p>
+      <span>Conecte seu CRM para puxar automaticamente oportunidades, receita por funil e cruzar com dados do Meta Ads</span>
+    </div>
+  </div>
+
+</div><!-- .dash -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+  // Atualiza hora
+  function updateTimestamp() {
+    const el = document.getElementById('lastUpdate');
+    const now = new Date();
+    el.textContent = 'Atualizado às ' + now.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+  }
+  updateTimestamp();
+
+  // Botão Atualizar Dash
+  function refreshDash() {
+    const btn = document.getElementById('btnRefresh');
+    btn.classList.add('loading');
+    btn.textContent = '↻ Atualizando...';
+    // Simula chamada à API (substituir por fetch real quando integrar)
+    setTimeout(() => {
+      renderAllPerf(document.getElementById('globalPeriod').value);
+      updateTimestamp();
+      btn.classList.remove('loading');
+      btn.textContent = '↻ Atualizar Dash';
+    }, 800);
+  }
+
+  // Seletor de período personalizado
+  function applyCustomRange() {
+    const from = document.getElementById('dateFrom').value;
+    const to = document.getElementById('dateTo').value;
+    if (!from || !to) return;
+    const d1 = new Date(from), d2 = new Date(to);
+    const days = Math.max(1, Math.round((d2 - d1) / 86400000));
+    const label = `${d1.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} – ${d2.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}`;
+    ['apl','web','soc'].forEach(k => {
+      const b = document.getElementById(k+'-period-badge');
+      if (b) b.textContent = label;
+    });
+    renderAllPerf(days.toString());
+  }
+
+  const tc = '#c1c1c1';
+  const bc = '#333333';
+
+  function showTab(id, el) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    el.classList.add('active');
+  }
+
+  function showSub(groupId, panelId, el) {
+    const group = document.getElementById(groupId);
+    group.querySelectorAll('.sub-panel').forEach(p => p.classList.remove('active'));
+    const parent = el.closest('.section');
+    parent.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(panelId).classList.add('active');
+    el.classList.add('active');
+  }
+
+  const currentYear = new Date().getFullYear();
+
+  const periodLabels = {
+    '7': 'Últimos 7 dias',
+    '14': 'Últimos 14 dias',
+    '30': 'Últimos 30 dias',
+    'month': 'Este mês',
+    'year': `Este ano (${currentYear})`,
+    'custom': 'Personalizado'
+  };
+
+  function onPeriodChange(val) {
+    const customRange = document.getElementById('customRange');
+    if (val === 'custom') {
+      customRange.classList.add('visible');
+      // Preenche datas padrão: início do mês até hoje
+      const today = new Date();
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      document.getElementById('dateFrom').value = firstDay.toISOString().split('T')[0];
+      document.getElementById('dateTo').value = today.toISOString().split('T')[0];
+      return;
+    }
+    customRange.classList.remove('visible');
+    const label = periodLabels[val] || val;
+    ['apl', 'web', 'soc'].forEach(k => {
+      const b = document.getElementById(k + '-period-badge');
+      if (b) b.textContent = label;
+    });
+    renderAllPerf(val);
+  }
+
+  const baseChartOpts = {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: { display: true, labels: { font: { size: 10, family: 'Figtree' }, color: tc, boxWidth: 10 } },
+      tooltip: { mode: 'index', intersect: false }
+    },
+    scales: {
+      x: { ticks: { font: { size: 9, family: 'Figtree' }, color: tc, maxTicksLimit: 6 }, grid: { color: bc } },
+      y: { ticks: { font: { size: 9, family: 'Figtree' }, color: tc }, grid: { color: bc } }
+    }
+  };
+
+  function getDays(n) {
+    return Array.from({ length: n }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - n + 1 + i);
+      return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    });
+  }
+
+  function seed(b, v, l) {
+    return Array.from({ length: l }, () => +(b - v + Math.random() * 2 * v).toFixed(2));
+  }
+
+  const charts = {};
+
+  function makeChart(id, type, labels, datasets, extraOpts = {}) {
+    const c = document.getElementById(id);
+    if (!c) return;
+    if (charts[id]) charts[id].destroy();
+    charts[id] = new Chart(c, { type, data: { labels, datasets }, options: { ...baseChartOpts, ...extraOpts } });
+  }
+
+  function renderLineCharts(days) {
+    const d = days || 30, l = getDays(d);
+    makeChart('ca-spend', 'line', l, [{ data: seed(620*(d/30), 180*(d/30), d), borderColor: '#FC8338', label: 'Spend R$', tension: 0.3, pointRadius: 0, borderWidth: 2, fill: true, backgroundColor: 'rgba(252,131,56,0.08)' }]);
+    makeChart('ca-leads', 'line', l, [{ data: seed(11*(d/30), 4*(d/30), d), borderColor: '#4ade80', label: 'Leads', tension: 0.3, pointRadius: 0, borderWidth: 2 }, { data: seed(3*(d/30), 1*(d/30), d), borderColor: '#60a5fa', label: 'MQLs', tension: 0.3, pointRadius: 0, borderWidth: 2 }]);
+    makeChart('cw-spend', 'line', l, [{ data: seed(310*(d/30), 90*(d/30), d), borderColor: '#FC8338', label: 'Spend R$', tension: 0.3, pointRadius: 0, borderWidth: 2, fill: true, backgroundColor: 'rgba(252,131,56,0.08)' }]);
+    makeChart('cw-leads', 'line', l, [{ data: seed(42*(d/30), 14*(d/30), d), borderColor: '#4ade80', label: 'Leads', tension: 0.3, pointRadius: 0, borderWidth: 2 }]);
+    makeChart('cs-seg', 'line', l, [{ data: seed(95*(d/30), 35*(d/30), d), borderColor: '#FF4A4A', label: 'Seguidores', tension: 0.3, pointRadius: 0, borderWidth: 2, fill: true, backgroundColor: 'rgba(255,74,74,0.08)' }]);
+    makeChart('cs-cps', 'line', l, [{ data: seed(1.5, 0.4, d).map(v => +v.toFixed(2)), borderColor: '#fb923c', label: 'R$/seg.', tension: 0.3, pointRadius: 0, borderWidth: 2 }]);
+  }
+
+  const ages = ['18-24', '25-34', '35-44', '45-54', '55+'];
+  makeChart('ca-age', 'bar', ages, [{ data: [58,42,61,78,95], backgroundColor: '#FC8338', label: 'CPL R$', borderRadius: 3 }]);
+  makeChart('ca-gender', 'bar', ['Masculino', 'Feminino'], [{ data: [9800,8620], backgroundColor: ['#FC8338','#FF4A4A'], label: 'Spend R$', borderRadius: 3 }, { data: [64,48], backgroundColor: ['rgba(252,131,56,0.5)','rgba(255,74,74,0.5)'], label: 'CPL R$', borderRadius: 3 }]);
+  makeChart('cw-age', 'bar', ages, [{ data: [9,6,8,13,18], backgroundColor: '#4ade80', label: 'CPL R$', borderRadius: 3 }]);
+  makeChart('cw-gender', 'bar', ['Masculino', 'Feminino'], [{ data: [3800,5350], backgroundColor: ['#FC8338','#FF4A4A'], label: 'Spend R$', borderRadius: 3 }, { data: [8.2,6.8], backgroundColor: ['rgba(252,131,56,0.5)','rgba(255,74,74,0.5)'], label: 'CPL R$', borderRadius: 3 }]);
+  makeChart('cs-age', 'bar', ages, [{ data: [1.9,1.4,1.6,2.1,2.8], backgroundColor: '#FF4A4A', label: 'R$/seg.', borderRadius: 3 }]);
+  makeChart('cs-gender', 'bar', ['Masculino', 'Feminino'], [{ data: [1800,2480], backgroundColor: ['#FC8338','#FF4A4A'], label: 'Spend R$', borderRadius: 3 }, { data: [1.7,1.4], backgroundColor: ['rgba(252,131,56,0.5)','rgba(255,74,74,0.5)'], label: 'R$/seg.', borderRadius: 3 }]);
+  makeChart('cg-funis', 'doughnut', ['Aplicação','Webinário','Social Selling'], [{ data: [18420,9150,4280], backgroundColor: ['#FC8338','#4ade80','#FF4A4A'], borderWidth: 0 }], { scales: {}, plugins: { legend: { display: true, position: 'right', labels: { font: { size: 10, family: 'Figtree' }, color: tc, boxWidth: 10 } } } });
+  makeChart('cg-leads', 'doughnut', ['Aplic. (leads)','Web (leads)','SS (abordados)'], [{ data: [342,1247,420], backgroundColor: ['#FC8338','#4ade80','#FF4A4A'], borderWidth: 0 }], { scales: {}, plugins: { legend: { display: true, position: 'right', labels: { font: { size: 10, family: 'Figtree' }, color: tc, boxWidth: 10 } } } });
+
+  const perfData = {
+    apl: {
+      camp: [{n:'Sessão Premium - Retarg.',spend:'R$ 5.920',conv:112,metric:'R$ 52,8',pct:-2,acao:'Aumentar orçamento'},{n:'Sessão Estratégica - Topo',spend:'R$ 7.840',conv:148,metric:'R$ 52,9',pct:-2,acao:'Manter'},{n:'Sessão VIP - Lookalike',spend:'R$ 4.660',conv:82,metric:'R$ 56,8',pct:+6,acao:'Monitorar'}],
+      conj: [{n:'Conj. 25-34 Interesses',spend:'R$ 3.100',conv:67,metric:'R$ 46,2',pct:-14,acao:'Escalar'},{n:'Conj. Remarketing Quente',spend:'R$ 2.800',conv:55,metric:'R$ 50,9',pct:-5,acao:'Manter'},{n:'Conj. 35-44 Lookalike',spend:'R$ 2.200',conv:38,metric:'R$ 57,9',pct:+8,acao:'Monitorar'},{n:'Conj. 45-54 Lookalike',spend:'R$ 1.820',conv:24,metric:'R$ 75,8',pct:+41,acao:'Pausar'}],
+      criat: [{n:'Vídeo Depoimento Cliente',spend:'R$ 2.400',conv:58,metric:'R$ 41,3',pct:-23,acao:'Duplicar'},{n:'Carrossel Resultados',spend:'R$ 1.900',conv:42,metric:'R$ 45,2',pct:-16,acao:'Escalar'},{n:'Imagem Estática 1',spend:'R$ 1.600',conv:31,metric:'R$ 51,6',pct:-4,acao:'Manter'},{n:'Imagem Estática 2',spend:'R$ 980',conv:11,metric:'R$ 89,0',pct:+65,acao:'Pausar'}]
+    },
+    web: {
+      camp: [{n:'Web - Remarketing',spend:'R$ 3.100',conv:480,metric:'R$ 6,4',pct:-12,acao:'Aumentar orçamento'},{n:'Web - Topo Frio',spend:'R$ 4.200',conv:612,metric:'R$ 6,8',pct:-6,acao:'Manter'},{n:'Web - Lookalike 3%',spend:'R$ 1.850',conv:155,metric:'R$ 11,9',pct:+63,acao:'Pausar ou testar criativo'}],
+      conj: [{n:'Mulheres 25-34 Interesses',spend:'R$ 1.800',conv:310,metric:'R$ 5,8',pct:-20,acao:'Escalar'},{n:'Remarketing 7 dias',spend:'R$ 1.400',conv:220,metric:'R$ 6,3',pct:-13,acao:'Manter'},{n:'Lookalike 1% Compradores',spend:'R$ 1.100',conv:140,metric:'R$ 7,8',pct:+7,acao:'Monitorar'},{n:'Lookalike 3% Frio',spend:'R$ 850',conv:78,metric:'R$ 10,9',pct:+49,acao:'Revisar criativo'}],
+      criat: [{n:'Carrossel Conteúdo Edu.',spend:'R$ 1.200',conv:198,metric:'R$ 6,0',pct:-17,acao:'Duplicar'},{n:'Vídeo Testemunho 30s',spend:'R$ 1.050',conv:163,metric:'R$ 6,4',pct:-12,acao:'Escalar'},{n:'Imagem Headline Direta',spend:'R$ 880',conv:112,metric:'R$ 7,8',pct:+7,acao:'Monitorar'},{n:'Reels Bastidores',spend:'R$ 520',conv:42,metric:'R$ 12,3',pct:+69,acao:'Pausar'}]
+    },
+    soc: {
+      camp: [{n:'Tráfego - Instagram',spend:'R$ 2.800',conv:1920,metric:'R$ 1,45',pct:-3,acao:'Manter/escalar'},{n:'Tráfego - Facebook',spend:'R$ 1.480',conv:921,metric:'R$ 1,60',pct:+7,acao:'Monitorar'}],
+      conj: [{n:'Stories 18-24',spend:'R$ 980',conv:820,metric:'R$ 1,19',pct:-21,acao:'Escalar'},{n:'Reels 25-34',spend:'R$ 760',conv:590,metric:'R$ 1,28',pct:-15,acao:'Manter'},{n:'Feed 35-44',spend:'R$ 720',conv:310,metric:'R$ 2,32',pct:+55,acao:'Pausar'}],
+      criat: [{n:'Reels Bastidores',spend:'R$ 640',conv:570,metric:'R$ 1,12',pct:-25,acao:'Duplicar'},{n:'Stories Antes/Depois',spend:'R$ 520',conv:430,metric:'R$ 1,20',pct:-20,acao:'Escalar'},{n:'Feed Carrossel',spend:'R$ 480',conv:310,metric:'R$ 1,54',pct:+3,acao:'Monitorar'},{n:'Feed Imagem Única',spend:'R$ 380',conv:180,metric:'R$ 2,11',pct:+41,acao:'Pausar'}]
+    }
+  };
+
+  function actionColor(pct) {
+    if (pct <= -10) return 'color:var(--av-success-text)';
+    if (pct <= 10)  return 'color:var(--av-warning-text)';
+    return 'color:var(--av-danger-text)';
+  }
+
+  function rankClass(i) { return i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : ''; }
+
+  function renderPerfTable(bodyId, rows, multiplier) {
+    const tbody = document.getElementById(bodyId);
+    if (!tbody) return;
+    const scaled = rows.map(r => ({
+      ...r,
+      spendNum: parseFloat(r.spend.replace(/[R$.\s]/g, '').replace(',', '.')) * multiplier,
+      convNum: Math.round(r.conv * multiplier)
+    }));
+    tbody.innerHTML = scaled.map((r, i) => {
+      const spendFmt = 'R$ ' + Math.round(r.spendNum).toLocaleString('pt-BR');
+      const badge = r.pct <= -10 ? `<span class="badge-best">top</span>` : r.pct >= 30 ? `<span class="badge-bad">pausar</span>` : r.pct >= 10 ? `<span class="badge-warn">alto</span>` : '';
+      return `<tr>
+        <td><span class="rank-num ${rankClass(i)}">${i+1}</span></td>
+        <td>${r.n}</td>
+        <td>${spendFmt}</td>
+        <td>${r.convNum.toLocaleString('pt-BR')}</td>
+        <td>${r.metric}${badge}</td>
+        <td style="${actionColor(r.pct)}">${r.pct > 0 ? '+' : ''}${r.pct}%</td>
+        <td style="${actionColor(r.pct)}">${r.acao}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderAllPerf(period) {
+    const multipliers = { '7': 7/30, '14': 14/30, '30': 1, 'month': 1, 'year': 12, 'custom': 1 };
+    const m = multipliers[period] !== undefined ? multipliers[period] : (parseInt(period) / 30) || 1;
+    ['apl', 'web', 'soc'].forEach(k => {
+      ['camp', 'conj', 'criat'].forEach(t => {
+        renderPerfTable(`${k}-${t}-body`, perfData[k][t], m);
+      });
+    });
+    const days = period === 'year' ? 365 : period === 'month' ? 30 : parseInt(period) || 30;
+    renderLineCharts(days);
+  }
+
+  function buildFunnel(id, stages) {
+    const wrap = document.getElementById(id);
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    const max = stages[0].val;
+    const colors = ['#FC8338', '#FF6B35', '#FF4A4A', '#e03a3a', '#c02a2a'];
+    stages.forEach((s, i) => {
+      const pct = Math.round((s.val / max) * 100);
+      const convPct = i > 0 ? Math.round((s.val / stages[i-1].val) * 100) : null;
+      const row = document.createElement('div');
+      row.className = 'funnel-stage';
+      const convColor = convPct !== null ? (convPct >= 30 ? 'var(--av-success-text)' : 'var(--av-warning-text)') : '';
+      row.innerHTML = `<div class="funnel-label">${s.label}</div>
+        <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${Math.max(pct,8)}%;background:${colors[i]}"><span>${s.val.toLocaleString('pt-BR')}</span></div></div>
+        <div class="funnel-pct">${convPct !== null ? `<span style="color:${convColor}">↓ ${convPct}%</span>` : '&nbsp;'}</div>`;
+      wrap.appendChild(row);
+    });
+  }
+
+  buildFunnel('funnel-apl', [{label:'Leads',val:342},{label:'MQLs',val:87},{label:'Calls agendadas',val:54},{label:'Calls realizadas',val:38},{label:'Vendas',val:12}]);
+  buildFunnel('funnel-web', [{label:'Leads',val:1247},{label:'Presentes',val:389},{label:'Calls agendadas',val:74},{label:'Calls realizadas',val:51},{label:'Vendas',val:18}]);
+  buildFunnel('funnel-soc', [{label:'Novos seguidores',val:2841},{label:'Abordados',val:420},{label:'Calls agendadas',val:31},{label:'Calls realizadas',val:22},{label:'Vendas',val:7}]);
+  // Funil geral: entradas no CRM (318 Apl + 1.083 Web + 120 SS = 1.521)
+  buildFunnel('funnel-ger', [{label:'Entradas no CRM',val:1521},{label:'Calls agendadas',val:159},{label:'Calls realizadas',val:111},{label:'Vendas',val:37}]);
+
+  renderAllPerf('30');
+</script>
+</body>
+</html>
