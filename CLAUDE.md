@@ -32,10 +32,15 @@ Identificação por palavra-chave no nome da campanha:
 - Filtrar apenas status `ACTIVE` / `IN_PROCESS` em campanhas, conjuntos e anúncios
 
 ## Estrutura do Pipedrive
-- **Um único pipeline** com as mesmas etapas para todos os funis
-- Funil Aplicação → leads **sem** tag WEBINARIO e **sem** tag kommo
-- Funil Webinário → leads com tag `WEBINARIO`
-- Funil Social Selling → leads com tag `kommo` (só chegam ao pipe após agendar call)
+- **Um único pipeline** chamado `Comercial`
+- Funil Aplicação → leads **sem** label WEBNARIO e **sem** label LEAD KOMMO
+- Funil Webinário → leads com label `WEBNARIO` (ID: 121)
+- Funil Social Selling → leads com label `LEAD KOMMO` (ID: 21) — só entram após agendar call
+- Etapa "Agendado" (ID: 12) = call agendada
+- Etapa "Call Realizada" (ID: 15) = call realizada
+- MQL = campo Budget preenchido com opção de alto valor (IDs: 63, 64, 65)
+- Vendas = negócios com status `won`
+- Receita = campo padrão `value` dos negócios ganhos
 - Leads presentes no webinário **não entram no Pipedrive** — ficam apenas na planilha Google Sheets (número total por evento, não individual)
 
 ## Dados manuais — Google Sheets

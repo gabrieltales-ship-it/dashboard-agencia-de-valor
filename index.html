@@ -524,8 +524,8 @@
       <select class="period-select" id="globalPeriod" onchange="onPeriodChange(this.value)">
         <option value="7">Últimos 7 dias</option>
         <option value="14">Últimos 14 dias</option>
-        <option value="30" selected>Últimos 30 dias</option>
-        <option value="month">Este mês</option>
+        <option value="30">Últimos 30 dias</option>
+        <option value="month" selected>Este mês</option>
         <option value="year" id="opt-year">Este ano</option>
         <option value="custom">Personalizado</option>
       </select>
@@ -564,13 +564,13 @@
       <!-- Fileira 2: dados do CRM (sem tag KOMMO / WEBINARIO) -->
       <div class="cards-row-label crm">CRM — Pipedrive <span style="font-size:9px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--av-text-muted)">(excl. tags KOMMO e WEBINÁRIO)</span></div>
       <div class="cards">
-        <div class="card crm-card"><div class="card-label">Leads</div><div class="card-value">318</div><div class="card-sub">CPL CRM: R$ 57,9</div></div>
-        <div class="card crm-card"><div class="card-label">MQLs</div><div class="card-value">82</div><div class="card-sub">Custo/MQL: R$ 224,6</div></div>
-        <div class="card crm-card"><div class="card-label">Calls agendadas</div><div class="card-value">54</div><div class="card-sub">R$ 341/call</div></div>
-        <div class="card crm-card"><div class="card-label">Calls realizadas</div><div class="card-value">38</div><div class="card-sub">R$ 484/call</div></div>
-        <div class="card crm-card"><div class="card-label">Vendas</div><div class="card-value">12</div><div class="card-sub">CAC R$ 1.535</div></div>
-        <div class="card crm-card"><div class="card-label">ROAS</div><div class="card-value">4,2x</div></div>
-        <div class="card receita-card"><div class="card-label">Receita</div><div class="card-value">R$ 77.364</div><div class="card-sub">negócios fechados</div></div>
+        <div class="card crm-card" id="apl-crm-leads"><div class="card-label">Leads</div><div class="card-value">—</div><div class="card-sub">CPL CRM: —</div></div>
+        <div class="card crm-card" id="apl-crm-mqls"><div class="card-label">MQLs</div><div class="card-value">—</div><div class="card-sub">Custo/MQL: —</div></div>
+        <div class="card crm-card" id="apl-crm-calls-agend"><div class="card-label">Calls agendadas</div><div class="card-value">—</div><div class="card-sub">—</div></div>
+        <div class="card crm-card" id="apl-crm-calls-real"><div class="card-label">Calls realizadas</div><div class="card-value">—</div><div class="card-sub">—</div></div>
+        <div class="card crm-card" id="apl-crm-vendas"><div class="card-label">Vendas</div><div class="card-value">—</div><div class="card-sub">—</div></div>
+        <div class="card crm-card"><div class="card-label">ROAS</div><div class="card-value" id="apl-crm-roas">—</div></div>
+        <div class="card receita-card" id="apl-crm-receita"><div class="card-label">Receita</div><div class="card-value">—</div><div class="card-sub">negócios fechados</div></div>
       </div>
     </div>
 
@@ -632,11 +632,11 @@
       <div class="card"><div class="card-label">Leads</div><div class="card-value">1.247</div></div>
       <div class="card"><div class="card-label">CPL</div><div class="card-value">R$ 7,3</div></div>
       <div class="card crm-card" style="border-color:#FC8338"><div class="card-label">Presentes <span class="manual-badge">manual</span></div><div class="card-value">389</div><div class="card-sub">31,2% dos leads</div></div>
-      <div class="card crm-card"><div class="card-label">Calls agendadas</div><div class="card-value">74</div><div class="card-sub">R$ 123/call</div></div>
-      <div class="card crm-card"><div class="card-label">Calls realizadas</div><div class="card-value">51</div><div class="card-sub">R$ 179/call</div></div>
-      <div class="card crm-card"><div class="card-label">Vendas</div><div class="card-value">18</div><div class="card-sub">CAC R$ 508</div></div>
-      <div class="card crm-card"><div class="card-label">ROAS</div><div class="card-value">6,1x</div></div>
-      <div class="card receita-card"><div class="card-label">Receita <span class="manual-badge" style="color:var(--av-warning-text)">Pipedrive</span></div><div class="card-value">R$ 55.815</div><div class="card-sub">soma dos negócios fechados</div></div>
+      <div class="card crm-card" id="web-crm-calls-agend"><div class="card-label">Calls agendadas</div><div class="card-value">—</div><div class="card-sub">—</div></div>
+      <div class="card crm-card" id="web-crm-calls-real"><div class="card-label">Calls realizadas</div><div class="card-value">—</div><div class="card-sub">—</div></div>
+      <div class="card crm-card" id="web-crm-vendas"><div class="card-label">Vendas</div><div class="card-value">—</div><div class="card-sub">—</div></div>
+      <div class="card crm-card"><div class="card-label">ROAS</div><div class="card-value" id="web-crm-roas">—</div></div>
+      <div class="card receita-card" id="web-crm-receita"><div class="card-label">Receita <span class="manual-badge" style="color:var(--av-warning-text)">Pipedrive</span></div><div class="card-value">—</div><div class="card-sub">negócios fechados</div></div>
     </div>
 
     <div class="section">
@@ -688,11 +688,11 @@
       <div class="card"><div class="card-label">Novos seguidores</div><div class="card-value">2.841</div><div class="card-sub">métrica nativa Meta</div></div>
       <div class="card"><div class="card-label">Custo/seguidor</div><div class="card-value">R$ 1,5</div></div>
       <div class="card crm-card" style="border-color:#FC8338"><div class="card-label">Abordados <span class="manual-badge">manual</span></div><div class="card-value">420</div><div class="card-sub">14,8% dos seguidores</div></div>
-      <div class="card crm-card"><div class="card-label">Calls agendadas</div><div class="card-value">31</div><div class="card-sub">R$ 138/call</div></div>
-      <div class="card crm-card"><div class="card-label">Calls realizadas</div><div class="card-value">22</div><div class="card-sub">R$ 194/call</div></div>
-      <div class="card crm-card"><div class="card-label">Vendas</div><div class="card-value">7</div><div class="card-sub">CAC R$ 611</div></div>
-      <div class="card crm-card"><div class="card-label">ROAS</div><div class="card-value">3,8x</div></div>
-      <div class="card receita-card"><div class="card-label">Receita <span class="manual-badge" style="color:var(--av-warning-text)">Pipedrive</span></div><div class="card-value">R$ 16.264</div><div class="card-sub">soma dos negócios fechados</div></div>
+      <div class="card crm-card" id="soc-crm-calls-agend"><div class="card-label">Calls agendadas</div><div class="card-value">—</div><div class="card-sub">—</div></div>
+      <div class="card crm-card" id="soc-crm-calls-real"><div class="card-label">Calls realizadas</div><div class="card-value">—</div><div class="card-sub">—</div></div>
+      <div class="card crm-card" id="soc-crm-vendas"><div class="card-label">Vendas</div><div class="card-value">—</div><div class="card-sub">—</div></div>
+      <div class="card crm-card"><div class="card-label">ROAS</div><div class="card-value" id="soc-crm-roas">—</div></div>
+      <div class="card receita-card" id="soc-crm-receita"><div class="card-label">Receita <span class="manual-badge" style="color:var(--av-warning-text)">Pipedrive</span></div><div class="card-value">—</div><div class="card-sub">negócios fechados</div></div>
     </div>
 
     <div class="section">
@@ -740,14 +740,14 @@
   <div class="panel" id="ger">
     <div class="cards">
       <div class="card"><div class="card-label">Total investido</div><div class="card-value">R$ 31.850</div><div class="card-sub">todos os funis</div></div>
-      <div class="card crm-card"><div class="card-label">Entradas no CRM</div><div class="card-value">1.521</div><div class="card-sub">leads Apl+Web+SS no Pipedrive</div></div>
-      <div class="card"><div class="card-label">CPL geral</div><div class="card-value">R$ 20,9</div><div class="card-sub">invest. ÷ entradas CRM</div></div>
+      <div class="card crm-card" id="ger-entradas"><div class="card-label">Entradas no CRM</div><div class="card-value">—</div><div class="card-sub">leads no Pipedrive</div></div>
+      <div class="card"><div class="card-label">CPL geral</div><div class="card-value">—</div><div class="card-sub">invest. ÷ entradas CRM</div></div>
       <div class="card crm-card"><div class="card-label">Calls agendadas</div><div class="card-value">159</div><div class="card-sub">R$ 200/call</div></div>
       <div class="card crm-card"><div class="card-label">Calls realizadas</div><div class="card-value">111</div><div class="card-sub">R$ 286/call</div></div>
-      <div class="card crm-card"><div class="card-label">Vendas totais</div><div class="card-value">37</div></div>
-      <div class="card crm-card"><div class="card-label">CAC médio</div><div class="card-value">R$ 860</div></div>
-      <div class="card crm-card"><div class="card-label">ROAS geral</div><div class="card-value">4,7x</div></div>
-      <div class="card receita-card"><div class="card-label">Receita total <span class="manual-badge" style="color:var(--av-warning-text)">Pipedrive</span></div><div class="card-value">R$ 149.443</div><div class="card-sub">todos os funis</div></div>
+      <div class="card crm-card" id="ger-vendas"><div class="card-label">Vendas totais</div><div class="card-value">—</div></div>
+      <div class="card crm-card"><div class="card-label">CAC médio</div><div class="card-value" id="ger-cac">—</div></div>
+      <div class="card crm-card"><div class="card-label">ROAS geral</div><div class="card-value" id="ger-roas">—</div></div>
+      <div class="card receita-card" id="ger-receita"><div class="card-label">Receita total <span class="manual-badge" style="color:var(--av-warning-text)">Pipedrive</span></div><div class="card-value">—</div><div class="card-sub">todos os funis</div></div>
     </div>
 
     <div class="section">
@@ -791,32 +791,143 @@
   updateTimestamp();
 
   // Botão Atualizar Dash
-  function refreshDash() {
+  // Converte o período selecionado em { since, until } no formato YYYY-MM-DD
+  function getPeriodDates(val) {
+    const today = new Date();
+    const fmt = d => d.toISOString().split('T')[0];
+
+    if (val === 'month') {
+      const since = fmt(new Date(today.getFullYear(), today.getMonth(), 1));
+      const until = fmt(today);
+      return { since, until };
+    }
+    if (val === 'year') {
+      const since = fmt(new Date(today.getFullYear(), 0, 1));
+      const until = fmt(today);
+      return { since, until };
+    }
+    if (val === 'custom') {
+      return {
+        since: document.getElementById('dateFrom').value,
+        until: document.getElementById('dateTo').value
+      };
+    }
+    // Numérico: últimos N dias
+    const days = parseInt(val) || 30;
+    const since = new Date(today);
+    since.setDate(since.getDate() - days);
+    return { since: fmt(since), until: fmt(today) };
+  }
+
+  // Busca dados reais do Pipedrive e atualiza o dashboard
+  async function fetchPipedrive(since, until) {
+    const res  = await fetch(`/api/pipedrive?since=${since}&until=${until}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    return data;
+  }
+
+  // Atualiza os cards com dados reais do Pipedrive
+  function applyPipedriveData(data) {
+    const apl = data.aplicacao;
+    const web = data.webinario;
+    const soc = data.social_selling;
+
+    // ── Aplicação ──
+    setCard('apl-crm-leads',          apl.leads,          `CPL CRM: ${fmtBRL(data._meta?.spend_apl / apl.leads)}`);
+    setCard('apl-crm-mqls',           apl.mqls,           `Custo/MQL: ${fmtBRL(data._meta?.spend_apl / apl.mqls)}`);
+    setCard('apl-crm-calls-agend',    apl.calls_agendadas,  `R$ ${fmtBRL(data._meta?.spend_apl / apl.calls_agendadas)}/call`);
+    setCard('apl-crm-calls-real',     apl.calls_realizadas, `R$ ${fmtBRL(data._meta?.spend_apl / apl.calls_realizadas)}/call`);
+    setCard('apl-crm-vendas',         apl.vendas,          `CAC —`);
+    setCard('apl-crm-receita',        `R$ ${fmtNum(apl.receita)}`, 'negócios fechados');
+
+    // ── Webinário ──
+    setCard('web-crm-calls-agend',    web.calls_agendadas);
+    setCard('web-crm-calls-real',     web.calls_realizadas);
+    setCard('web-crm-vendas',         web.vendas);
+    setCard('web-crm-receita',        `R$ ${fmtNum(web.receita)}`, 'negócios fechados');
+
+    // ── Social Selling ──
+    setCard('soc-crm-calls-agend',    soc.calls_agendadas);
+    setCard('soc-crm-calls-real',     soc.calls_realizadas);
+    setCard('soc-crm-vendas',         soc.vendas);
+    setCard('soc-crm-receita',        `R$ ${fmtNum(soc.receita)}`, 'negócios fechados');
+
+    // ── Visão Geral ──
+    const totalLeads  = data.total_leads_crm;
+    const totalVendas = apl.vendas + web.vendas + soc.vendas;
+    const totalReceita = apl.receita + web.receita + soc.receita;
+    setCard('ger-entradas', totalLeads, 'leads no Pipedrive');
+    setCard('ger-vendas',   totalVendas);
+    setCard('ger-receita',  `R$ ${fmtNum(totalReceita)}`, 'todos os funis');
+    // CAC e ROAS ficam nos elementos de valor diretamente
+    const cacEl  = document.getElementById('ger-cac');
+    const roasEl = document.getElementById('ger-roas');
+    if (cacEl)  cacEl.textContent  = totalVendas > 0 ? fmtBRL(totalReceita / totalVendas) : '—';
+    if (roasEl) roasEl.textContent = '—'; // será calculado quando Meta Ads estiver conectado
+
+    // Funil geral
+    buildFunnel('funnel-ger', [
+      { label: 'Entradas no CRM', val: totalLeads },
+      { label: 'Calls agendadas', val: apl.calls_agendadas + web.calls_agendadas + soc.calls_agendadas },
+      { label: 'Calls realizadas', val: apl.calls_realizadas + web.calls_realizadas + soc.calls_realizadas },
+      { label: 'Vendas', val: apl.vendas + web.vendas + soc.vendas }
+    ]);
+  }
+
+  function setCard(id, value, sub) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const valEl = el.querySelector('.card-value');
+    const subEl = el.querySelector('.card-sub');
+    if (valEl) valEl.textContent = value;
+    if (subEl && sub !== undefined) subEl.textContent = sub;
+  }
+
+  function fmtBRL(n) {
+    if (!n || !isFinite(n)) return '—';
+    return 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+
+  function fmtNum(n) {
+    if (!n || !isFinite(n)) return '0';
+    return n.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+
+  async function refreshDash() {
     const btn = document.getElementById('btnRefresh');
     btn.classList.add('loading');
     btn.textContent = '↻ Atualizando...';
-    // Simula chamada à API (substituir por fetch real quando integrar)
-    setTimeout(() => {
-      renderAllPerf(document.getElementById('globalPeriod').value);
+
+    const period = document.getElementById('globalPeriod').value;
+    const { since, until } = getPeriodDates(period);
+
+    try {
+      const data = await fetchPipedrive(since, until);
+      applyPipedriveData(data);
+      renderAllPerf(period);
       updateTimestamp();
+    } catch (err) {
+      console.error('Erro ao buscar Pipedrive:', err.message);
+      alert('Erro ao atualizar dados: ' + err.message);
+    } finally {
       btn.classList.remove('loading');
       btn.textContent = '↻ Atualizar Dash';
-    }, 800);
+    }
   }
 
   // Seletor de período personalizado
   function applyCustomRange() {
     const from = document.getElementById('dateFrom').value;
-    const to = document.getElementById('dateTo').value;
+    const to   = document.getElementById('dateTo').value;
     if (!from || !to) return;
     const d1 = new Date(from), d2 = new Date(to);
-    const days = Math.max(1, Math.round((d2 - d1) / 86400000));
     const label = `${d1.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} – ${d2.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}`;
     ['apl','web','soc'].forEach(k => {
       const b = document.getElementById(k+'-period-badge');
       if (b) b.textContent = label;
     });
-    renderAllPerf(days.toString());
+    refreshDash();
   }
 
   const tc = '#c1c1c1';
@@ -1009,7 +1120,19 @@
   // Funil geral: entradas no CRM (318 Apl + 1.083 Web + 120 SS = 1.521)
   buildFunnel('funnel-ger', [{label:'Entradas no CRM',val:1521},{label:'Calls agendadas',val:159},{label:'Calls realizadas',val:111},{label:'Vendas',val:37}]);
 
-  renderAllPerf('30');
+  renderAllPerf('month');
+
+  // Carrega dados reais do Pipedrive ao abrir o dashboard
+  (async () => {
+    const { since, until } = getPeriodDates('month');
+    try {
+      const data = await fetchPipedrive(since, until);
+      applyPipedriveData(data);
+      updateTimestamp();
+    } catch (err) {
+      console.error('Erro ao carregar Pipedrive:', err.message);
+    }
+  })();
 </script>
 </body>
 </html>
