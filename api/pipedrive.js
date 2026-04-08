@@ -1,5 +1,12 @@
 // Vercel Serverless Function — Pipedrive API
-// Chamada: GET /api/pipedrive?since=2026-01-01&until=2026-04-08
+// Chamada: GET /api/pipedrive?since=2026-01-01&until=2026-04-30
+//
+// Cada métrica filtra pelo momento em que o evento ocorreu:
+//   Leads  → add_time (quando entrou no CRM)
+//   MQLs   → add_time (presença do campo Budget no momento de entrada)
+//   Calls agendadas  → due_date da atividade de call no período
+//   Calls realizadas → due_date da atividade de call + done=true no período
+//   Vendas / Receita → won_time do negócio no período
 
 const BASE = 'https://api.pipedrive.com/v1';
 
@@ -35,20 +42,6 @@ async function getPipelineId(token) {
   return p.id;
 }
 
-// ─── Busca IDs das etapas pelo nome ──────────────────────────────────────────
-
-async function getStageIds(token, pipelineId) {
-  const res  = await fetch(`${BASE}/stages?pipeline_id=${pipelineId}&api_token=${token}`);
-  const json = await res.json();
-  const stages = json.data || [];
-  const find = name => stages.find(s => s.name === name)?.id;
-  return {
-    agendado:      find('Agendado'),
-    callRealizada: find('Call Realizada'),
-    all: stages
-  };
-}
-
 // ─── Busca campo Budget e IDs das opções MQL ─────────────────────────────────
 
 async function getBudgetField(token) {
@@ -71,14 +64,12 @@ async function getBudgetField(token) {
   return { key: field.key, mqlIds };
 }
 
-// ─── Busca IDs dos labels (WEBINARIO e kommo) ────────────────────────────────
-// No Pipedrive, o campo "Label" dos negócios guarda IDs numéricos, não texto
+// ─── Busca IDs dos labels (WEBNARIO e LEAD KOMMO) ────────────────────────────
 
 async function getLabelIds(token) {
   const res  = await fetch(`${BASE}/dealFields?api_token=${token}&limit=500`);
   const json = await res.json();
 
-  // O campo de label nativo do Pipedrive tem key = "label"
   const labelField = json.data?.find(f => f.key === 'label');
   if (!labelField?.options) return { webinario: null, kommo: null };
 
@@ -100,7 +91,6 @@ async function getLabelIds(token) {
 function getFunnel(deal, labelIds) {
   const raw = deal.label;
 
-  // label pode ser null, número, string ou array
   const dealLabels = raw == null
     ? []
     : (Array.isArray(raw) ? raw : String(raw).split(','))
@@ -112,31 +102,38 @@ function getFunnel(deal, labelIds) {
   return 'aplicacao';
 }
 
-// ─── Calcula métricas ─────────────────────────────────────────────────────────
+// ─── Calcula métricas por funil ───────────────────────────────────────────────
+// Cada métrica usa a data do evento, não a data de entrada do lead.
 
-function calcMetrics(deals, stageIds, budgetKey, mqlIds) {
-  const stageOrder = Object.fromEntries(stageIds.all.map(s => [s.id, s.order_nr]));
-  const orderAgendado      = stageOrder[stageIds.agendado]      ?? 0;
-  const orderCallRealizada = stageOrder[stageIds.callRealizada]  ?? 0;
+function calcFunnelMetrics(allDeals, activities, funnelDealIds, budgetKey, mqlIds, sinceTs, untilTs) {
 
-  const leads  = deals.length;
+  // Leads = negócios deste funil com add_time no período
+  const leadsInPeriod = allDeals.filter(d => {
+    if (!funnelDealIds.has(d.id)) return false;
+    const t = new Date(d.add_time).getTime();
+    return t >= sinceTs && t <= untilTs;
+  });
 
-  const mqls = deals.filter(d =>
+  const leads = leadsInPeriod.length;
+  const mqls  = leadsInPeriod.filter(d =>
     mqlIds.includes(String(d[budgetKey] ?? ''))
   ).length;
 
-  const calls_agendadas = deals.filter(d =>
-    d.status === 'won' || (stageOrder[d.stage_id] ?? -1) >= orderAgendado
-  ).length;
+  // Calls = atividades de call deste funil com due_date no período (já pré-filtradas)
+  const funnelActivities = activities.filter(a => funnelDealIds.has(a.deal_id));
+  const calls_agendadas  = funnelActivities.length;
+  const calls_realizadas = funnelActivities.filter(a => a.done === true || a.done === 1).length;
 
-  const calls_realizadas = deals.filter(d =>
-    d.status === 'won' || (stageOrder[d.stage_id] ?? -1) >= orderCallRealizada
-  ).length;
+  // Vendas/Receita = negócios ganhos com won_time no período
+  const wonDeals = allDeals.filter(d => {
+    if (!funnelDealIds.has(d.id)) return false;
+    if (d.status !== 'won' || !d.won_time) return false;
+    const t = new Date(d.won_time).getTime();
+    return t >= sinceTs && t <= untilTs;
+  });
 
-  const vendas  = deals.filter(d => d.status === 'won').length;
-  const receita = deals
-    .filter(d => d.status === 'won')
-    .reduce((sum, d) => sum + (parseFloat(d.value) || 0), 0);
+  const vendas  = wonDeals.length;
+  const receita = wonDeals.reduce((sum, d) => sum + (parseFloat(d.value) || 0), 0);
 
   return { leads, mqls, calls_agendadas, calls_realizadas, vendas, receita };
 }
@@ -154,52 +151,66 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Parâmetros since e until são obrigatórios (YYYY-MM-DD)' });
   }
 
+  const sinceTs = new Date(since).getTime();
+  const untilTs = new Date(until + 'T23:59:59').getTime();
+
   try {
     const pipelineId = await getPipelineId(token);
 
-    const [stageData, budgetField, labelIds, allDeals] = await Promise.all([
-      getStageIds(token, pipelineId),
+    // Busca em paralelo: negócios, campos, labels e atividades de call no período
+    const [budgetField, labelIds, allDeals, allActivities] = await Promise.all([
       getBudgetField(token),
       getLabelIds(token),
-      // Busca todos os negócios do pipeline e filtra por add_time no código
-      // (Pipedrive não aceita filtro por add_time via query params)
       fetchAll('/deals', token, {
         pipeline_id: pipelineId,
         status: 'all_not_deleted'
+      }),
+      fetchAll('/activities', token, {
+        type:       'call',
+        start_date: since,
+        end_date:   until
       })
     ]);
 
-    // Filtra por add_time (data de entrada no CRM) dentro do período
-    const sinceTs = new Date(since).getTime();
-    const untilTs = new Date(until + 'T23:59:59').getTime();
+    // Mapa id→deal para cruzar atividades com o pipeline correto
+    const dealMap = new Map(allDeals.map(d => [d.id, d]));
 
-    const deals = allDeals.filter(d => {
-      const t = new Date(d.add_time).getTime();
-      return t >= sinceTs && t <= untilTs;
-    });
+    // Atividades de call cujo negócio está no pipeline "Comercial"
+    const pipelineActivities = allActivities.filter(
+      a => a.deal_id && dealMap.has(a.deal_id)
+    );
 
-    // Separa por funil usando IDs reais dos labels
-    const grupos = { aplicacao: [], webinario: [], social_selling: [] };
-    for (const deal of deals) {
-      grupos[getFunnel(deal, labelIds)].push(deal);
+    // Separa IDs dos negócios por funil (usando todos os negócios, não só do período)
+    const funnelIds = { aplicacao: new Set(), webinario: new Set(), social_selling: new Set() };
+    for (const deal of allDeals) {
+      funnelIds[getFunnel(deal, labelIds)].add(deal.id);
     }
 
-    const calcArgs = [stageData, budgetField.key, budgetField.mqlIds];
+    const calcArgs = [allDeals, pipelineActivities, null, budgetField.key, budgetField.mqlIds, sinceTs, untilTs];
+
+    const aplicacao      = calcFunnelMetrics(allDeals, pipelineActivities, funnelIds.aplicacao,      budgetField.key, budgetField.mqlIds, sinceTs, untilTs);
+    const webinario      = calcFunnelMetrics(allDeals, pipelineActivities, funnelIds.webinario,      budgetField.key, budgetField.mqlIds, sinceTs, untilTs);
+    const social_selling = calcFunnelMetrics(allDeals, pipelineActivities, funnelIds.social_selling, budgetField.key, budgetField.mqlIds, sinceTs, untilTs);
+
+    // Total de leads no período (soma dos 3 funis por add_time)
+    const total_leads_crm = allDeals.filter(d => {
+      const t = new Date(d.add_time).getTime();
+      return t >= sinceTs && t <= untilTs;
+    }).length;
 
     return res.status(200).json({
       source: 'pipedrive',
       period: { since, until },
-      aplicacao:       calcMetrics(grupos.aplicacao,      ...calcArgs),
-      webinario:       calcMetrics(grupos.webinario,       ...calcArgs),
-      social_selling:  calcMetrics(grupos.social_selling,  ...calcArgs),
-      total_leads_crm: deals.length,
+      aplicacao,
+      webinario,
+      social_selling,
+      total_leads_crm,
       _debug: {
-        stageIds: { agendado: stageData.agendado, callRealizada: stageData.callRealizada },
-        budgetFieldKey: budgetField.key,
-        mqlOptionIds: budgetField.mqlIds,
+        budgetFieldKey:      budgetField.key,
+        mqlOptionIds:        budgetField.mqlIds,
         labelIds,
-        totalDealsNoPeriodo: deals.length,
-        totalDealsNoPipeline: allDeals.length
+        totalDealsNoPipeline: allDeals.length,
+        totalActivitiesNoPeriodo: pipelineActivities.length
       }
     });
 

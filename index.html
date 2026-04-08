@@ -842,12 +842,14 @@
     const soc = data.social_selling;
 
     // ── Aplicação ──
-    setCard('apl-crm-leads',          apl.leads,          `CPL CRM: ${fmtBRL(data._meta?.spend_apl / apl.leads)}`);
-    setCard('apl-crm-mqls',           apl.mqls,           `Custo/MQL: ${fmtBRL(data._meta?.spend_apl / apl.mqls)}`);
-    setCard('apl-crm-calls-agend',    apl.calls_agendadas,  `R$ ${fmtBRL(data._meta?.spend_apl / apl.calls_agendadas)}/call`);
-    setCard('apl-crm-calls-real',     apl.calls_realizadas, `R$ ${fmtBRL(data._meta?.spend_apl / apl.calls_realizadas)}/call`);
-    setCard('apl-crm-vendas',         apl.vendas,          `CAC —`);
-    setCard('apl-crm-receita',        `R$ ${fmtNum(apl.receita)}`, 'negócios fechados');
+    // Custos por Meta Ads serão calculados quando Meta estiver conectado
+    const spend_apl = data._meta?.spend_apl;
+    setCard('apl-crm-leads',       apl.leads,          spend_apl ? `CPL CRM: ${fmtBRL(spend_apl / apl.leads)}` : 'Meta Ads não conectado');
+    setCard('apl-crm-mqls',        apl.mqls,           spend_apl ? `Custo/MQL: ${fmtBRL(spend_apl / apl.mqls)}` : 'Meta Ads não conectado');
+    setCard('apl-crm-calls-agend', apl.calls_agendadas,  spend_apl ? `R$ ${fmtBRL(spend_apl / apl.calls_agendadas)}/call` : '—');
+    setCard('apl-crm-calls-real',  apl.calls_realizadas, spend_apl ? `R$ ${fmtBRL(spend_apl / apl.calls_realizadas)}/call` : '—');
+    setCard('apl-crm-vendas',      apl.vendas,          spend_apl ? `CAC: ${fmtBRL(spend_apl / apl.vendas)}` : '—');
+    setCard('apl-crm-receita',     `R$ ${fmtNum(apl.receita)}`, 'negócios fechados');
 
     // ── Webinário ──
     setCard('web-crm-calls-agend',    web.calls_agendadas);
