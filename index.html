@@ -629,9 +629,9 @@
   <div class="panel" id="web">
     <div class="cards">
       <div class="card"><div class="card-label">Valor gasto</div><div class="card-value">R$ 9.150</div><div class="card-sub">campanhas "web"</div></div>
-      <div class="card"><div class="card-label">Leads</div><div class="card-value">1.247</div></div>
-      <div class="card"><div class="card-label">CPL</div><div class="card-value">R$ 7,3</div></div>
-      <div class="card crm-card" style="border-color:#FC8338"><div class="card-label">Presentes <span class="manual-badge">manual</span></div><div class="card-value">389</div><div class="card-sub">31,2% dos leads</div></div>
+      <div class="card crm-card" id="web-leads"><div class="card-label">Leads <span class="manual-badge">planilha</span></div><div class="card-value">—</div><div class="card-sub">—</div></div>
+      <div class="card" id="web-cpl"><div class="card-label">CPL</div><div class="card-value">—</div></div>
+      <div class="card crm-card" id="web-presentes" style="border-color:#FC8338"><div class="card-label">Presentes <span class="manual-badge">planilha</span></div><div class="card-value">—</div><div class="card-sub">—</div></div>
       <div class="card crm-card" id="web-crm-calls-agend"><div class="card-label">Calls agendadas</div><div class="card-value">—</div><div class="card-sub">—</div></div>
       <div class="card crm-card" id="web-crm-calls-real"><div class="card-label">Calls realizadas</div><div class="card-value">—</div><div class="card-sub">—</div></div>
       <div class="card crm-card" id="web-crm-vendas"><div class="card-label">Vendas</div><div class="card-value">—</div><div class="card-sub">—</div></div>
@@ -687,7 +687,7 @@
       <div class="card"><div class="card-label">Valor gasto</div><div class="card-value">R$ 4.280</div><div class="card-sub">campanhas "Tráfego"</div></div>
       <div class="card"><div class="card-label">Novos seguidores</div><div class="card-value">2.841</div><div class="card-sub">métrica nativa Meta</div></div>
       <div class="card"><div class="card-label">Custo/seguidor</div><div class="card-value">R$ 1,5</div></div>
-      <div class="card crm-card" style="border-color:#FC8338"><div class="card-label">Abordados <span class="manual-badge">manual</span></div><div class="card-value">420</div><div class="card-sub">14,8% dos seguidores</div></div>
+      <div class="card crm-card" id="soc-abordados" style="border-color:#FC8338"><div class="card-label">Abordados <span class="manual-badge">planilha</span></div><div class="card-value">—</div><div class="card-sub">—</div></div>
       <div class="card crm-card" id="soc-crm-calls-agend"><div class="card-label">Calls agendadas</div><div class="card-value">—</div><div class="card-sub">—</div></div>
       <div class="card crm-card" id="soc-crm-calls-real"><div class="card-label">Calls realizadas</div><div class="card-value">—</div><div class="card-sub">—</div></div>
       <div class="card crm-card" id="soc-crm-vendas"><div class="card-label">Vendas</div><div class="card-value">—</div><div class="card-sub">—</div></div>
@@ -819,9 +819,17 @@
     return { since: fmt(since), until: fmt(today) };
   }
 
-  // Busca dados reais do Pipedrive e atualiza o dashboard
+  // Busca dados reais do Pipedrive
   async function fetchPipedrive(since, until) {
     const res  = await fetch(`/api/pipedrive?since=${since}&until=${until}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    return data;
+  }
+
+  // Busca dados da planilha Google Sheets
+  async function fetchSheets(since, until) {
+    const res  = await fetch(`/api/sheets?since=${since}&until=${until}`);
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     return data;
@@ -866,7 +874,30 @@
     if (cacEl)  cacEl.textContent  = totalVendas > 0 ? fmtBRL(totalReceita / totalVendas) : '—';
     if (roasEl) roasEl.textContent = '—'; // será calculado quando Meta Ads estiver conectado
 
-    // Funil geral
+    // ── Funnels individuais com dados reais do CRM ──
+    buildFunnel('funnel-apl', [
+      { label: 'Leads CRM',        val: apl.leads },
+      { label: 'MQLs',             val: apl.mqls },
+      { label: 'Calls agendadas',  val: apl.calls_agendadas },
+      { label: 'Calls realizadas', val: apl.calls_realizadas },
+      { label: 'Vendas',           val: apl.vendas }
+    ]);
+    buildFunnel('funnel-web', [
+      { label: 'Leads',            val: null },          // planilha — em breve
+      { label: 'Presentes',        val: null },          // planilha — em breve
+      { label: 'Calls agendadas',  val: web.calls_agendadas },
+      { label: 'Calls realizadas', val: web.calls_realizadas },
+      { label: 'Vendas',           val: web.vendas }
+    ]);
+    buildFunnel('funnel-soc', [
+      { label: 'Novos seguidores', val: null },          // Meta Ads — em breve
+      { label: 'Abordados',        val: null },          // planilha — em breve
+      { label: 'Calls agendadas',  val: soc.calls_agendadas },
+      { label: 'Calls realizadas', val: soc.calls_realizadas },
+      { label: 'Vendas',           val: soc.vendas }
+    ]);
+
+    // ── Funil geral ──
     buildFunnel('funnel-ger', [
       { label: 'Entradas no CRM', val: totalLeads },
       { label: 'Calls agendadas', val: apl.calls_agendadas + web.calls_agendadas + soc.calls_agendadas },
@@ -894,6 +925,50 @@
     return n.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   }
 
+  // Atualiza cards e funnels com dados da planilha
+  function applySheetData(sheets, crmData) {
+    const web = sheets.webinario;
+    const soc = sheets.social_selling;
+
+    const leads    = web?.leads    ?? 0;
+    const presentes = web?.presentes ?? 0;
+    const abordados = soc?.abordados ?? 0;
+
+    // Cards de Webinário
+    setCard('web-leads',    leads,    `do período selecionado`);
+    setCard('web-presentes', presentes, presentes > 0 && leads > 0
+      ? `${Math.round(presentes / leads * 100)}% dos leads`
+      : '—');
+
+    // CPL = Valor gasto (Meta, ainda mockado) / Leads planilha
+    // Por ora deixamos o cálculo para quando Meta conectar
+    const cplEl = document.getElementById('web-cpl');
+    if (cplEl) cplEl.querySelector('.card-value').textContent = '—';
+
+    // Card de Social Selling
+    setCard('soc-abordados', abordados, abordados > 0 ? `no período` : '—');
+
+    // Reconstrói os funnels com dados reais de planilha + CRM
+    if (crmData) {
+      const webCrm = crmData.webinario;
+      const socCrm = crmData.social_selling;
+      buildFunnel('funnel-web', [
+        { label: 'Leads',            val: leads > 0 ? leads : null },
+        { label: 'Presentes',        val: presentes > 0 ? presentes : null },
+        { label: 'Calls agendadas',  val: webCrm.calls_agendadas },
+        { label: 'Calls realizadas', val: webCrm.calls_realizadas },
+        { label: 'Vendas',           val: webCrm.vendas }
+      ]);
+      buildFunnel('funnel-soc', [
+        { label: 'Novos seguidores', val: null },           // Meta Ads — em breve
+        { label: 'Abordados',        val: abordados > 0 ? abordados : null },
+        { label: 'Calls agendadas',  val: socCrm.calls_agendadas },
+        { label: 'Calls realizadas', val: socCrm.calls_realizadas },
+        { label: 'Vendas',           val: socCrm.vendas }
+      ]);
+    }
+  }
+
   async function refreshDash() {
     const btn = document.getElementById('btnRefresh');
     btn.classList.add('loading');
@@ -903,12 +978,22 @@
     const { since, until } = getPeriodDates(period);
 
     try {
-      const data = await fetchPipedrive(since, until);
-      applyPipedriveData(data);
+      // Busca Pipedrive e Sheets em paralelo
+      const [crmData, sheetsData] = await Promise.allSettled([
+        fetchPipedrive(since, until),
+        fetchSheets(since, until)
+      ]);
+
+      if (crmData.status === 'fulfilled') applyPipedriveData(crmData.value);
+      else console.error('Pipedrive:', crmData.reason?.message);
+
+      if (sheetsData.status === 'fulfilled') applySheetData(sheetsData.value, crmData.value);
+      else console.warn('Sheets ainda não configurado:', sheetsData.reason?.message);
+
       renderAllPerf(period);
       updateTimestamp();
     } catch (err) {
-      console.error('Erro ao buscar Pipedrive:', err.message);
+      console.error('Erro ao atualizar dados:', err.message);
       alert('Erro ao atualizar dados: ' + err.message);
     } finally {
       btn.classList.remove('loading');
@@ -1099,39 +1184,54 @@
     const wrap = document.getElementById(id);
     if (!wrap) return;
     wrap.innerHTML = '';
-    const max = stages[0].val;
     const colors = ['#FC8338', '#FF6B35', '#FF4A4A', '#e03a3a', '#c02a2a'];
+    // usa o primeiro valor não-nulo como referência de 100%
+    const firstReal = stages.find(s => s.val !== null && s.val !== undefined);
+    const max = firstReal ? Math.max(firstReal.val, 1) : 1;
     stages.forEach((s, i) => {
-      const pct = Math.round((s.val / max) * 100);
-      const convPct = i > 0 ? Math.round((s.val / stages[i-1].val) * 100) : null;
+      const isNull = s.val === null || s.val === undefined;
+      const val    = isNull ? 0 : s.val;
+      const pct    = Math.round((val / max) * 100);
+      const prev   = i > 0 ? stages[i - 1].val : null;
+      const convPct = (!isNull && prev !== null && prev > 0)
+        ? Math.round((val / prev) * 100)
+        : null;
       const row = document.createElement('div');
       row.className = 'funnel-stage';
-      const convColor = convPct !== null ? (convPct >= 30 ? 'var(--av-success-text)' : 'var(--av-warning-text)') : '';
+      const convColor  = convPct !== null ? (convPct >= 30 ? 'var(--av-success-text)' : 'var(--av-warning-text)') : '';
+      const barStyle   = isNull
+        ? 'width:20%;background:var(--av-wm-fill);opacity:0.5;border:1px dashed var(--av-border);'
+        : `width:${Math.max(pct,8)}%;background:${colors[Math.min(i, colors.length-1)]};`;
+      const displayVal = isNull
+        ? '<span style="color:var(--av-text-muted);font-size:11px">em breve</span>'
+        : `<span>${val.toLocaleString('pt-BR')}</span>`;
       row.innerHTML = `<div class="funnel-label">${s.label}</div>
-        <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${Math.max(pct,8)}%;background:${colors[i]}"><span>${s.val.toLocaleString('pt-BR')}</span></div></div>
+        <div class="funnel-bar-wrap"><div class="funnel-bar" style="${barStyle}">${displayVal}</div></div>
         <div class="funnel-pct">${convPct !== null ? `<span style="color:${convColor}">↓ ${convPct}%</span>` : '&nbsp;'}</div>`;
       wrap.appendChild(row);
     });
   }
 
-  buildFunnel('funnel-apl', [{label:'Leads',val:342},{label:'MQLs',val:87},{label:'Calls agendadas',val:54},{label:'Calls realizadas',val:38},{label:'Vendas',val:12}]);
-  buildFunnel('funnel-web', [{label:'Leads',val:1247},{label:'Presentes',val:389},{label:'Calls agendadas',val:74},{label:'Calls realizadas',val:51},{label:'Vendas',val:18}]);
-  buildFunnel('funnel-soc', [{label:'Novos seguidores',val:2841},{label:'Abordados',val:420},{label:'Calls agendadas',val:31},{label:'Calls realizadas',val:22},{label:'Vendas',val:7}]);
-  // Funil geral: entradas no CRM (318 Apl + 1.083 Web + 120 SS = 1.521)
-  buildFunnel('funnel-ger', [{label:'Entradas no CRM',val:1521},{label:'Calls agendadas',val:159},{label:'Calls realizadas',val:111},{label:'Vendas',val:37}]);
+  // Funnels iniciais — serão substituídos pelos dados reais ao carregar
+  buildFunnel('funnel-apl', [{label:'Leads CRM',val:1},{label:'MQLs',val:0},{label:'Calls agendadas',val:0},{label:'Calls realizadas',val:0},{label:'Vendas',val:0}]);
+  buildFunnel('funnel-web', [{label:'Leads',val:null},{label:'Presentes',val:null},{label:'Calls agendadas',val:1},{label:'Calls realizadas',val:0},{label:'Vendas',val:0}]);
+  buildFunnel('funnel-soc', [{label:'Novos seguidores',val:null},{label:'Abordados',val:null},{label:'Calls agendadas',val:1},{label:'Calls realizadas',val:0},{label:'Vendas',val:0}]);
+  buildFunnel('funnel-ger', [{label:'Entradas no CRM',val:1},{label:'Calls agendadas',val:0},{label:'Calls realizadas',val:0},{label:'Vendas',val:0}]);
 
   renderAllPerf('month');
 
-  // Carrega dados reais do Pipedrive ao abrir o dashboard
+  // Carrega dados reais ao abrir o dashboard (Pipedrive + Sheets em paralelo)
   (async () => {
     const { since, until } = getPeriodDates('month');
-    try {
-      const data = await fetchPipedrive(since, until);
-      applyPipedriveData(data);
-      updateTimestamp();
-    } catch (err) {
-      console.error('Erro ao carregar Pipedrive:', err.message);
-    }
+    const [crmResult, sheetsResult] = await Promise.allSettled([
+      fetchPipedrive(since, until),
+      fetchSheets(since, until)
+    ]);
+    if (crmResult.status === 'fulfilled') applyPipedriveData(crmResult.value);
+    else console.error('Pipedrive:', crmResult.reason?.message);
+    if (sheetsResult.status === 'fulfilled') applySheetData(sheetsResult.value, crmResult.value);
+    else console.warn('Sheets ainda não configurado:', sheetsResult.reason?.message);
+    updateTimestamp();
   })();
 </script>
 </body>
