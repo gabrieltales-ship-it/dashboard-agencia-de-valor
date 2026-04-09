@@ -193,7 +193,11 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Parâmetros since e until são obrigatórios (YYYY-MM-DD)' });
   }
 
-  const sinceTs = new Date(since).getTime();
+  // Usar 'T00:00:00' sem offset força parse como horário local do servidor,
+  // igual ao comportamento de datas retornadas pelo Pipedrive (sem timezone explícito).
+  // Se since fosse parseado como UTC e Pipedrive retorna horário de Brasília (UTC-3),
+  // um negócio de 31/03 às 23:09 viraria 01/04 às 02:09 UTC e cairia no período errado.
+  const sinceTs = new Date(since + 'T00:00:00').getTime();
   const untilTs = new Date(until + 'T23:59:59').getTime();
 
   try {
