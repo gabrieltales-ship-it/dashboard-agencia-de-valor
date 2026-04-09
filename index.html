@@ -593,13 +593,11 @@
     </div>
 
     <div class="section">
-      <div class="section-title">Campanhas — Sessão <span class="budget-total">Orçamento total: R$ 1.240/dia</span></div>
+      <div class="section-title">Campanhas — Sessão <span class="budget-total" id="apl-budget-total">Orçamento total: —</span></div>
       <table>
         <thead><tr><th style="width:30%">Campanha</th><th>Orç./dia</th><th>Spend</th><th>Leads</th><th>MQLs</th><th>CPL</th><th>CPMQL</th></tr></thead>
-        <tbody>
-          <tr><td>Sessão Estratégica - Topo</td><td>R$ 560</td><td>R$ 7.840</td><td>148</td><td>38</td><td>R$ 52,9<span class="badge-best">top</span></td><td>R$ 206</td></tr>
-          <tr><td>Sessão Premium - Retarg.</td><td>R$ 420</td><td>R$ 5.920</td><td>112</td><td>31</td><td>R$ 52,8<span class="badge-best">top</span></td><td>R$ 191</td></tr>
-          <tr><td>Sessão VIP - Lookalike</td><td>R$ 260</td><td>R$ 4.660</td><td>82</td><td>18</td><td>R$ 56,8<span class="badge-warn">alto</span></td><td>R$ 259</td></tr>
+        <tbody id="apl-camp-fixed">
+          <tr><td colspan="7" style="color:var(--av-text-muted);text-align:center;font-size:12px">Carregando dados do Meta Ads…</td></tr>
         </tbody>
       </table>
     </div>
@@ -666,13 +664,11 @@
     </div>
 
     <div class="section">
-      <div class="section-title">Campanhas — Web <span class="budget-total">Orçamento total: R$ 620/dia</span></div>
+      <div class="section-title">Campanhas — Web <span class="budget-total" id="web-budget-total">Orçamento total: —</span></div>
       <table>
         <thead><tr><th style="width:28%">Campanha</th><th>Orç./dia</th><th>Spend</th><th>Leads</th><th>CPL</th><th>CTR</th><th>Impressões</th></tr></thead>
-        <tbody>
-          <tr><td>Web - Topo Frio</td><td>R$ 280</td><td>R$ 4.200</td><td>612</td><td>R$ 6,8<span class="badge-best">top</span></td><td>2,1%</td><td>142.000</td></tr>
-          <tr><td>Web - Remarketing</td><td>R$ 220</td><td>R$ 3.100</td><td>480</td><td>R$ 6,4<span class="badge-best">top</span></td><td>3,4%</td><td>98.000</td></tr>
-          <tr><td>Web - Lookalike 3%</td><td>R$ 120</td><td>R$ 1.850</td><td>155</td><td>R$ 11,9<span class="badge-warn">alto</span></td><td>1,8%</td><td>67.000</td></tr>
+        <tbody id="web-camp-fixed">
+          <tr><td colspan="7" style="color:var(--av-text-muted);text-align:center;font-size:12px">Carregando dados do Meta Ads…</td></tr>
         </tbody>
       </table>
     </div>
@@ -701,7 +697,7 @@
   <div class="panel" id="soc">
     <div class="cards">
       <div class="card" id="soc-spend"><div class="card-label">Valor gasto</div><div class="card-value">R$ 4.280</div><div class="card-sub">campanhas "Tráfego"</div></div>
-      <div class="card" id="soc-seguidores"><div class="card-label">Novos seguidores</div><div class="card-value">2.841</div><div class="card-sub">métrica nativa Meta</div></div>
+      <div class="card" id="soc-seguidores"><div class="card-label">Novos seguidores <span class="manual-badge">planilha</span></div><div class="card-value">—</div><div class="card-sub">via planilha</div></div>
       <div class="card" id="soc-cps"><div class="card-label">Custo/seguidor</div><div class="card-value">R$ 1,5</div></div>
       <div class="card crm-card" id="soc-abordados" style="border-color:#FC8338"><div class="card-label">Abordados <span class="manual-badge">planilha</span></div><div class="card-value">—</div><div class="card-sub">—</div></div>
       <div class="card crm-card" id="soc-crm-calls-agend"><div class="card-label">Calls agendadas</div><div class="card-value">—</div><div class="card-sub">—</div></div>
@@ -730,12 +726,11 @@
     </div>
 
     <div class="section">
-      <div class="section-title">Campanhas — Tráfego <span class="budget-total">Orçamento total: R$ 290/dia</span></div>
+      <div class="section-title">Campanhas — Tráfego <span class="budget-total" id="soc-budget-total">Orçamento total: —</span></div>
       <table>
         <thead><tr><th style="width:28%">Campanha</th><th>Orç./dia</th><th>Spend</th><th>Seguidores</th><th>Custo/seg.</th><th>Alcance</th></tr></thead>
-        <tbody>
-          <tr><td>Tráfego - Instagram</td><td>R$ 185</td><td>R$ 2.800</td><td>1.920</td><td>R$ 1,45<span class="badge-best">top</span></td><td>84.000</td></tr>
-          <tr><td>Tráfego - Facebook</td><td>R$ 105</td><td>R$ 1.480</td><td>921</td><td>R$ 1,60<span class="badge-warn">alto</span></td><td>52.000</td></tr>
+        <tbody id="soc-camp-fixed">
+          <tr><td colspan="6" style="color:var(--av-text-muted);text-align:center;font-size:12px">Carregando dados do Meta Ads…</td></tr>
         </tbody>
       </table>
     </div>
@@ -868,8 +863,17 @@
     const web = meta.webinario;
     const soc = meta.social_selling;
 
-    // Armazena campanhas para renderAllPerf
-    _realMetaCamps = meta._debug?.campaigns || null;
+    // Armazena campanhas/adsets/ads para renderAllPerf e tabelas fixas
+    _realMetaCamps = {
+      aplicacao:      { campaigns: meta.aplicacao.campaigns || [], adsets: meta.aplicacao.adsets || [], ads: meta.aplicacao.ads || [] },
+      webinario:      { campaigns: meta.webinario.campaigns || [], adsets: meta.webinario.adsets || [], ads: meta.webinario.ads || [] },
+      social_selling: { campaigns: meta.social_selling.campaigns || [], adsets: meta.social_selling.adsets || [], ads: meta.social_selling.ads || [] },
+    };
+
+    // Renderiza tabelas fixas de campanhas
+    renderCampFixedApl(meta.aplicacao.campaigns || []);
+    renderCampFixedWeb(meta.webinario.campaigns || []);
+    renderCampFixedSoc(meta.social_selling.campaigns || []);
 
     // IDs podem estar no .card-value diretamente (apl-*) ou no .card pai (web-*, soc-*)
     const setVal = (id, text) => {
@@ -1117,12 +1121,12 @@
 
     // Cards de Social Selling
     setCard('soc-abordados',  abordados,  abordados  > 0 ? `no período` : '—');
-    if (seguidores > 0) {
-      const socSpendEl = document.getElementById('soc-spend');
-      const socSpend = socSpendEl ? parseFloat(socSpendEl.querySelector('.card-value')?.textContent?.replace(/[R$.\s]/g,'').replace(',','.')) : 0;
-      setCard('soc-seguidores', seguidores, 'via planilha');
-      setCard('soc-cps', seguidores > 0 && socSpend > 0 ? fmtBRL(socSpend / seguidores) : '—');
-    }
+
+    // Seguidores sempre vem da planilha — atualiza o card independente do valor
+    const socSpendEl = document.getElementById('soc-spend');
+    const socSpend = socSpendEl ? parseFloat(socSpendEl.querySelector('.card-value')?.textContent?.replace(/[R$.\s]/g,'').replace(',','.')) : 0;
+    setCard('soc-seguidores', seguidores > 0 ? seguidores : '—', 'via planilha');
+    if (seguidores > 0 && socSpend > 0) setCard('soc-cps', fmtBRL(socSpend / seguidores));
 
     // Reconstrói os funnels com dados reais de planilha + CRM
     if (crmData) {
@@ -1348,45 +1352,114 @@
     }).join('');
   }
 
-  // Converte campanhas reais do Meta no formato esperado por renderPerfTable
-  function buildRealPerfRows(campaigns) {
-    if (!campaigns || campaigns.length === 0) return null;
-    const active = campaigns.filter(c => c.spend > 0);
+  // Converte campanhas/adsets/ads reais do Meta no formato esperado por renderPerfTable
+  // metricType: 'leads' (Aplicação/Webinário) ou 'seguidores' (Social Selling)
+  function buildRealPerfRows(items, metricType = 'leads') {
+    if (!items || items.length === 0) return null;
+    const active = items.filter(c => c.spend > 0);
     if (active.length === 0) return null;
-    const cpls = active.filter(c => c.leads > 0).map(c => c.spend / c.leads);
+
+    const getConv = c => metricType === 'seguidores' ? (c.seguidores || 0) : (c.leads || 0);
+    const cpls = active.filter(c => getConv(c) > 0).map(c => c.spend / getConv(c));
     const avgCPL = cpls.length > 0 ? cpls.reduce((a, b) => a + b, 0) / cpls.length : 0;
+
     return active
-      .sort((a, b) => (a.leads > 0 ? a.spend/a.leads : Infinity) - (b.leads > 0 ? b.spend/b.leads : Infinity))
+      .sort((a, b) => {
+        const ac = getConv(a), bc = getConv(b);
+        return (ac > 0 ? a.spend/ac : Infinity) - (bc > 0 ? b.spend/bc : Infinity);
+      })
       .map(c => {
-        const cpl = c.leads > 0 ? c.spend / c.leads : null;
-        const pct = cpl && avgCPL > 0 ? Math.round(((cpl - avgCPL) / avgCPL) * 100) : 0;
-        const acao = pct <= -10 ? 'Aumentar orçamento' : pct >= 30 ? 'Pausar' : pct >= 10 ? 'Monitorar' : 'Manter';
+        const conv = getConv(c);
+        const cpl  = conv > 0 ? c.spend / conv : null;
+        const pct  = cpl && avgCPL > 0 ? Math.round(((cpl - avgCPL) / avgCPL) * 100) : 0;
+        const acao = pct <= -10 ? 'Escalar' : pct >= 30 ? 'Pausar' : pct >= 10 ? 'Monitorar' : 'Manter';
         return {
           n:      c.name,
           spend:  `R$ ${Math.round(c.spend).toLocaleString('pt-BR')}`,
-          conv:   c.leads,
+          conv,
           metric: cpl ? fmtBRL(cpl) : '—',
           pct,
-          acao
+          acao,
         };
       });
+  }
+
+  // Renderiza tabela fixa — Campanhas Aplicação
+  function renderCampFixedApl(campaigns) {
+    const tbody = document.getElementById('apl-camp-fixed');
+    if (!tbody) return;
+    const active = campaigns.filter(c => c.spend > 0 || c.leads > 0);
+    if (!active.length) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--av-text-muted);text-align:center;font-size:12px">Nenhuma campanha com dados no período</td></tr>'; return; }
+
+    const totalBudget = active.reduce((s, c) => s + (c.daily_budget || 0), 0);
+    const budgetEl = document.getElementById('apl-budget-total');
+    if (budgetEl && totalBudget > 0) budgetEl.textContent = `Orçamento total: R$ ${fmtNum(totalBudget)}/dia`;
+
+    tbody.innerHTML = active.map(c => {
+      const cpl   = c.leads > 0 ? fmtBRL(c.spend / c.leads) : '—';
+      const cpmql = c.mqls  > 0 ? fmtBRL(c.spend / c.mqls)  : '—';
+      const bgt   = c.daily_budget > 0 ? `R$ ${fmtNum(c.daily_budget)}` : '—';
+      return `<tr><td>${c.name}</td><td>${bgt}</td><td>R$ ${fmtNum(c.spend)}</td><td>${c.leads || '—'}</td><td>${c.mqls || '—'}</td><td>${cpl}</td><td>${cpmql}</td></tr>`;
+    }).join('');
+  }
+
+  // Renderiza tabela fixa — Campanhas Webinário
+  function renderCampFixedWeb(campaigns) {
+    const tbody = document.getElementById('web-camp-fixed');
+    if (!tbody) return;
+    const active = campaigns.filter(c => c.spend > 0 || c.leads > 0);
+    if (!active.length) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--av-text-muted);text-align:center;font-size:12px">Nenhuma campanha com dados no período</td></tr>'; return; }
+
+    const totalBudget = active.reduce((s, c) => s + (c.daily_budget || 0), 0);
+    const budgetEl = document.getElementById('web-budget-total');
+    if (budgetEl && totalBudget > 0) budgetEl.textContent = `Orçamento total: R$ ${fmtNum(totalBudget)}/dia`;
+
+    tbody.innerHTML = active.map(c => {
+      const cpl = c.leads > 0 ? fmtBRL(c.spend / c.leads) : '—';
+      const ctr = c.ctr > 0 ? c.ctr.toFixed(1) + '%' : '—';
+      const imp = c.impressions > 0 ? c.impressions.toLocaleString('pt-BR') : '—';
+      const bgt = c.daily_budget > 0 ? `R$ ${fmtNum(c.daily_budget)}` : '—';
+      return `<tr><td>${c.name}</td><td>${bgt}</td><td>R$ ${fmtNum(c.spend)}</td><td>${c.leads || '—'}</td><td>${cpl}</td><td>${ctr}</td><td>${imp}</td></tr>`;
+    }).join('');
+  }
+
+  // Renderiza tabela fixa — Campanhas Social Selling
+  function renderCampFixedSoc(campaigns) {
+    const tbody = document.getElementById('soc-camp-fixed');
+    if (!tbody) return;
+    const active = campaigns.filter(c => c.spend > 0 || c.seguidores > 0);
+    if (!active.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--av-text-muted);text-align:center;font-size:12px">Nenhuma campanha com dados no período</td></tr>'; return; }
+
+    const totalBudget = active.reduce((s, c) => s + (c.daily_budget || 0), 0);
+    const budgetEl = document.getElementById('soc-budget-total');
+    if (budgetEl && totalBudget > 0) budgetEl.textContent = `Orçamento total: R$ ${fmtNum(totalBudget)}/dia`;
+
+    tbody.innerHTML = active.map(c => {
+      const cps   = c.seguidores > 0 ? fmtBRL(c.spend / c.seguidores) : '—';
+      const reach = c.reach > 0 ? c.reach.toLocaleString('pt-BR') : '—';
+      const bgt   = c.daily_budget > 0 ? `R$ ${fmtNum(c.daily_budget)}` : '—';
+      return `<tr><td>${c.name}</td><td>${bgt}</td><td>R$ ${fmtNum(c.spend)}</td><td>${c.seguidores || '—'}</td><td>${cps}</td><td>${reach}</td></tr>`;
+    }).join('');
   }
 
   function renderAllPerf(period) {
     const multipliers = { '7': 7/30, '14': 14/30, '30': 1, 'month': 1, 'year': 12, 'custom': 1 };
     const m = multipliers[period] !== undefined ? multipliers[period] : (parseInt(period) / 30) || 1;
 
-    const funnelKeys = { apl: 'aplicacao', web: 'webinario', soc: 'social_selling' };
+    const funnelKeys  = { apl: 'aplicacao', web: 'webinario', soc: 'social_selling' };
+    const metricTypes = { apl: 'leads', web: 'leads', soc: 'seguidores' };
+
     ['apl', 'web', 'soc'].forEach(k => {
-      const realRows = _realMetaCamps ? buildRealPerfRows(_realMetaCamps[funnelKeys[k]]) : null;
-      if (realRows) {
-        renderPerfTable(`${k}-camp-body`, realRows, 1); // multiplier=1: dados já são do período real
-      } else {
-        renderPerfTable(`${k}-camp-body`, perfData[k].camp, m);
-      }
-      // Conjuntos e criativos ainda usam mock (requerem chamada de nível adset/ad)
-      renderPerfTable(`${k}-conj-body`,  perfData[k].conj,  m);
-      renderPerfTable(`${k}-criat-body`, perfData[k].criat, m);
+      const fd    = _realMetaCamps ? _realMetaCamps[funnelKeys[k]] : null;
+      const mtype = metricTypes[k];
+
+      const campRows  = fd ? buildRealPerfRows(fd.campaigns, mtype) : null;
+      const conjRows  = fd ? buildRealPerfRows(fd.adsets, mtype)    : null;
+      const criatRows = fd ? buildRealPerfRows(fd.ads, mtype)       : null;
+
+      renderPerfTable(`${k}-camp-body`,  campRows  || perfData[k].camp,  campRows  ? 1 : m);
+      renderPerfTable(`${k}-conj-body`,  conjRows  || perfData[k].conj,  conjRows  ? 1 : m);
+      renderPerfTable(`${k}-criat-body`, criatRows || perfData[k].criat, criatRows ? 1 : m);
     });
     const days = period === 'year' ? 365 : period === 'month' ? 30 : parseInt(period) || 30;
     renderLineCharts(days);
