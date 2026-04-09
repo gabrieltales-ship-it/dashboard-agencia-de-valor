@@ -79,24 +79,34 @@ async function getBudgetField(token) {
 }
 
 // ─── Busca IDs dos labels (WEBNARIO e LEAD KOMMO) ────────────────────────────
+// IDs conhecidos como fallback (CLAUDE.md): WEBNARIO=121, LEAD KOMMO=21
 
 async function getLabelIds(token) {
   const res  = await fetch(`${BASE}/dealFields?api_token=${token}&limit=500`);
   const json = await res.json();
 
   const labelField = json.data?.find(f => f.key === 'label');
-  if (!labelField?.options) return { webinario: null, kommo: null };
 
-  const find = name => labelField.options
-    .find(o => o.label.toLowerCase() === name.toLowerCase())?.id;
+  let webinarioId = null;
+  let kommoId     = null;
+  let allLabels   = [];
 
-  const webinarioId = find('WEBNARIO');
-  const kommoId     = find('LEAD KOMMO');
+  if (labelField?.options) {
+    allLabels = labelField.options.map(o => ({ id: o.id, label: o.label }));
+    const find = name => labelField.options
+      .find(o => o.label.toLowerCase() === name.toLowerCase())?.id;
+    webinarioId = find('WEBNARIO');
+    kommoId     = find('LEAD KOMMO');
+  }
+
+  // Fallback para IDs conhecidos caso a busca dinâmica falhe
+  if (webinarioId == null) webinarioId = 121;
+  if (kommoId     == null) kommoId     = 21;
 
   return {
-    webinario: webinarioId != null ? String(webinarioId) : null,
-    kommo:     kommoId     != null ? String(kommoId)     : null,
-    _allLabels: labelField.options.map(o => ({ id: o.id, label: o.label }))
+    webinario:  String(webinarioId),
+    kommo:      String(kommoId),
+    _allLabels: allLabels
   };
 }
 
@@ -118,21 +128,17 @@ function getFunnel(deal, labelIds) {
 
 // ─── Calcula métricas por funil ───────────────────────────────────────────────
 //
-// Calls: usa stage_change_time (quando o negócio mudou para a etapa atual).
-//   - Negócio atualmente em "Agendado" com stage_change_time no período → agendada no período ✓
-//   - Negócio atualmente em "Call Realizada" com stage_change_time no período → realizada no período ✓
-//   - Negócio ganho (won) com won_time no período → conta como agendada E realizada ✓
-//   - Negócio em etapas posteriores (além de Call Realizada) com stage_change_time no período →
-//     conta para realizadas mas NÃO para agendadas (a call foi agendada em período anterior)
-//
-// Limitação conhecida: um negócio que passou por "Agendado" em período anterior e foi para
-// "Call Realizada" no período atual conta apenas como realizada, não como agendada.
-// Isso é correto — a agendada foi em outro período.
+// Leads / MQLs  → negócios criados (add_time) no período
+// Calls         → entre os leads criados no período, quantos já alcançaram essa etapa
+//                 (etapa atual >= threshold = o negócio passou por lá em algum momento)
+//                 Ganhos também contam pois passaram por todas as etapas
+// Vendas/Receita → todos os negócios ganhos (won_time) no período,
+//                  independente de quando foram criados
 
 function calcFunnelMetrics(allDeals, funnelDealIds, stageIds, budgetKey, mqlIds, sinceTs, untilTs) {
-  const stageOrder       = Object.fromEntries(stageIds.all.map(s => [s.id, s.order_nr]));
-  const orderAgendado    = stageOrder[stageIds.agendado]      ?? 0;
-  const orderCallReal    = stageOrder[stageIds.callRealizada]  ?? 0;
+  const stageOrder    = Object.fromEntries(stageIds.all.map(s => [s.id, s.order_nr]));
+  const orderAgendado = stageOrder[stageIds.agendado]     ?? 0;
+  const orderCallReal = stageOrder[stageIds.callRealizada] ?? 0;
 
   const funnelDeals = allDeals.filter(d => funnelDealIds.has(d.id));
 
@@ -146,39 +152,22 @@ function calcFunnelMetrics(allDeals, funnelDealIds, stageIds, budgetKey, mqlIds,
     mqlIds.includes(String(d[budgetKey] ?? ''))
   ).length;
 
-  // ── Calls agendadas: negócios que chegaram à etapa "Agendado" no período ──
-  // Cobre: atualmente em Agendado (stage_change_time no período)
-  //        + ganhos no período (won_time no período — passaram por Agendado)
-  const calls_agendadas = funnelDeals.filter(d => {
-    // Negócio ganho no período
-    if (d.status === 'won' && d.won_time) {
-      const t = new Date(d.won_time).getTime();
-      return t >= sinceTs && t <= untilTs;
-    }
-    // Negócio ativo/perdido: verificar stage_change_time e etapa atual
-    if (!d.stage_change_time) return false;
-    const t     = new Date(d.stage_change_time).getTime();
+  // ── Calls agendadas: leads criados no período que chegaram a "Agendado" ou além ──
+  // Se etapa atual >= Agendado (ou ganho), o negócio passou pela etapa de agendamento
+  const calls_agendadas = leadsInPeriod.filter(d => {
+    if (d.status === 'won') return true;
     const order = stageOrder[d.stage_id] ?? -1;
-    // Conta apenas se a etapa atual for exatamente "Agendado"
-    // (etapas além de Agendado têm stage_change_time mais recente que o de Agendado)
-    return t >= sinceTs && t <= untilTs && order === orderAgendado;
+    return order >= orderAgendado;
   }).length;
 
-  // ── Calls realizadas: negócios que chegaram à etapa "Call Realizada" ou além no período ──
-  const calls_realizadas = funnelDeals.filter(d => {
-    // Negócio ganho no período
-    if (d.status === 'won' && d.won_time) {
-      const t = new Date(d.won_time).getTime();
-      return t >= sinceTs && t <= untilTs;
-    }
-    // Negócio ativo/perdido: etapa atual >= Call Realizada com stage_change_time no período
-    if (!d.stage_change_time) return false;
-    const t     = new Date(d.stage_change_time).getTime();
+  // ── Calls realizadas: leads criados no período que chegaram a "Call Realizada" ou além ──
+  const calls_realizadas = leadsInPeriod.filter(d => {
+    if (d.status === 'won') return true;
     const order = stageOrder[d.stage_id] ?? -1;
-    return t >= sinceTs && t <= untilTs && order >= orderCallReal;
+    return order >= orderCallReal;
   }).length;
 
-  // ── Vendas e Receita: negócios ganhos com won_time no período ──
+  // ── Vendas e Receita: negócios ganhos com won_time no período (qualquer add_time) ──
   const wonDeals = funnelDeals.filter(d => {
     if (d.status !== 'won' || !d.won_time) return false;
     const t = new Date(d.won_time).getTime();
@@ -228,8 +217,6 @@ export default async function handler(req, res) {
     for (const deal of allDeals) {
       funnelIds[getFunnel(deal, labelIds)].add(deal.id);
     }
-
-    const calcArgs = [allDeals, null, stageData, budgetField.key, budgetField.mqlIds, sinceTs, untilTs];
 
     const aplicacao      = calcFunnelMetrics(allDeals, funnelIds.aplicacao,      stageData, budgetField.key, budgetField.mqlIds, sinceTs, untilTs);
     const webinario      = calcFunnelMetrics(allDeals, funnelIds.webinario,      stageData, budgetField.key, budgetField.mqlIds, sinceTs, untilTs);
