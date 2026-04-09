@@ -62,7 +62,7 @@ async function getFunnelInsights(adAccountId, campaignIds, since, until, token, 
   const filtering = JSON.stringify([
     { field: 'campaign.id', operator: 'IN', value: campaignIds }
   ]);
-  const fields = 'campaign_id,campaign_name,spend,actions';
+  const fields = 'campaign_id,campaign_name,spend,actions,page_fan_adds';
 
   const url = `${BASE}/${adAccountId}/insights`
     + `?level=campaign`
@@ -84,11 +84,9 @@ async function getFunnelInsights(adAccountId, campaignIds, since, until, token, 
     if (mqlActionType) mqlTypes.unshift(mqlActionType);
     const rowMqls  = sumActions(row.actions, ...mqlTypes);
 
-    const rowSegs  = sumActions(row.actions,
-      'onsite_conversion.follow',
-      'page_fan_adds',
-      'follow'
-    );
+    // page_fan_adds é campo direto (não fica em actions)
+    const rowSegs  = (parseInt(row.page_fan_adds, 10) || 0)
+      + sumActions(row.actions, 'onsite_conversion.follow', 'follow');
 
     spend      += rowSpend;
     leads      += rowLeads;
