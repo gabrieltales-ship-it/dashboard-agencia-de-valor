@@ -859,11 +859,17 @@
     return data;
   }
 
+  // Campanhas reais do Meta (preenchido por applyMetaData, usado por renderAllPerf)
+  let _realMetaCamps = null;
+
   // Atualiza cards com dados reais do Meta Ads
   function applyMetaData(meta, crmData) {
     const apl = meta.aplicacao;
     const web = meta.webinario;
     const soc = meta.social_selling;
+
+    // Armazena campanhas para renderAllPerf
+    _realMetaCamps = meta._debug?.campaigns || null;
 
     // IDs podem estar no .card-value diretamente (apl-*) ou no .card pai (web-*, soc-*)
     const setVal = (id, text) => {
@@ -872,13 +878,15 @@
       if (el.classList.contains('card-value')) el.textContent = text;
       else { const v = el.querySelector('.card-value'); if (v) v.textContent = text; }
     };
+    const setText = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = t; };
+    const setSub  = (id, t) => { const el = document.getElementById(id); if (!el) return; const s = el.querySelector('.card-sub'); if (s) s.textContent = t; };
 
     // ── Aplicação ──
-    setVal('apl-spend',  apl.spend  > 0 ? `R$ ${fmtNum(apl.spend)}`  : '—');
-    setVal('apl-leads',  apl.leads  > 0 ? apl.leads  : '—');
-    setVal('apl-mqls',   apl.mqls   > 0 ? apl.mqls   : '—');
-    setVal('apl-cpl',    apl.leads  > 0 ? fmtBRL(apl.spend / apl.leads)  : '—');
-    setVal('apl-cpmql',  apl.mqls   > 0 ? fmtBRL(apl.spend / apl.mqls)   : '—');
+    setVal('apl-spend',  apl.spend > 0 ? `R$ ${fmtNum(apl.spend)}` : '—');
+    setVal('apl-leads',  apl.leads > 0 ? apl.leads : '—');
+    setVal('apl-mqls',   apl.mqls  > 0 ? apl.mqls  : '—');
+    setVal('apl-cpl',    apl.leads > 0 ? fmtBRL(apl.spend / apl.leads) : '—');
+    setVal('apl-cpmql',  apl.mqls  > 0 ? fmtBRL(apl.spend / apl.mqls)  : '—');
 
     // ── Webinário ──
     setVal('web-spend', web.spend > 0 ? `R$ ${fmtNum(web.spend)}` : '—');
@@ -887,59 +895,74 @@
       (web.spend > 0 && web.leads > 0) ? fmtBRL(web.spend / web.leads) : '—';
 
     // ── Social Selling ──
-    setVal('soc-spend',      soc.spend      > 0 ? `R$ ${fmtNum(soc.spend)}`            : '—');
-    setVal('soc-seguidores', soc.seguidores > 0 ? soc.seguidores                        : '—');
-    setVal('soc-cps',        soc.seguidores > 0 ? fmtBRL(soc.spend / soc.seguidores)   : '—');
+    setVal('soc-spend', soc.spend > 0 ? `R$ ${fmtNum(soc.spend)}` : '—');
 
-    // ── Cards CRM com CPL/CAC calculados agora que temos o spend ──
     if (crmData) {
-      const ca = crmData.aplicacao;
-      if (ca.leads > 0)          setCard('apl-crm-leads', ca.leads, apl.spend > 0 ? `CPL CRM: ${fmtBRL(apl.spend / ca.leads)}` : '—');
-      if (ca.mqls  > 0)          setCard('apl-crm-mqls',  ca.mqls,  apl.spend > 0 ? `Custo/MQL: ${fmtBRL(apl.spend / ca.mqls)}` : '—');
-      if (ca.vendas > 0)         setCard('apl-crm-vendas', ca.vendas, apl.spend > 0 ? `CAC: ${fmtBRL(apl.spend / ca.vendas)}` : '—');
+      const ca  = crmData.aplicacao;
+      const wc  = crmData.webinario;
+      const sc  = crmData.social_selling;
 
-      // ROAS
+      // ── CPL / Custo/MQL / CAC por funil ──
+      if (ca.leads > 0)  setCard('apl-crm-leads', ca.leads, apl.spend > 0 ? `CPL CRM: ${fmtBRL(apl.spend / ca.leads)}` : '—');
+      if (ca.mqls  > 0)  setCard('apl-crm-mqls',  ca.mqls,  apl.spend > 0 ? `Custo/MQL: ${fmtBRL(apl.spend / ca.mqls)}` : '—');
+
+      // ── Custo por call ──
+      if (ca.calls_agendadas  > 0) setSub('apl-crm-calls-agend', apl.spend > 0 ? `${fmtBRL(apl.spend / ca.calls_agendadas)}/call` : '—');
+      if (ca.calls_realizadas > 0) setSub('apl-crm-calls-real',  apl.spend > 0 ? `${fmtBRL(apl.spend / ca.calls_realizadas)}/call` : '—');
+      if (wc.calls_agendadas  > 0) setSub('web-crm-calls-agend', web.spend > 0 ? `${fmtBRL(web.spend / wc.calls_agendadas)}/call` : '—');
+      if (wc.calls_realizadas > 0) setSub('web-crm-calls-real',  web.spend > 0 ? `${fmtBRL(web.spend / wc.calls_realizadas)}/call` : '—');
+      if (sc.calls_agendadas  > 0) setSub('soc-crm-calls-agend', soc.spend > 0 ? `${fmtBRL(soc.spend / sc.calls_agendadas)}/call` : '—');
+      if (sc.calls_realizadas > 0) setSub('soc-crm-calls-real',  soc.spend > 0 ? `${fmtBRL(soc.spend / sc.calls_realizadas)}/call` : '—');
+
+      // ── CAC e ROAS por funil ──
       const aplRoas = ca.receita > 0 && apl.spend > 0 ? (ca.receita / apl.spend).toFixed(1) + 'x' : '—';
-      const webRoas = crmData.webinario.receita > 0 && web.spend > 0 ? (crmData.webinario.receita / web.spend).toFixed(1) + 'x' : '—';
-      const socRoas = crmData.social_selling.receita > 0 && soc.spend > 0 ? (crmData.social_selling.receita / soc.spend).toFixed(1) + 'x' : '—';
+      const webRoas = wc.receita > 0 && web.spend > 0 ? (wc.receita / web.spend).toFixed(1) + 'x' : '—';
+      const socRoas = sc.receita > 0 && soc.spend > 0 ? (sc.receita / soc.spend).toFixed(1) + 'x' : '—';
       const aplCac  = ca.vendas > 0 && apl.spend > 0 ? fmtBRL(apl.spend / ca.vendas) : '—';
-      const webCac  = crmData.webinario.vendas > 0 && web.spend > 0 ? fmtBRL(web.spend / crmData.webinario.vendas) : '—';
-      const socCac  = crmData.social_selling.vendas > 0 && soc.spend > 0 ? fmtBRL(soc.spend / crmData.social_selling.vendas) : '—';
+      const webCac  = wc.vendas > 0 && web.spend > 0 ? fmtBRL(web.spend / wc.vendas) : '—';
+      const socCac  = sc.vendas > 0 && soc.spend > 0 ? fmtBRL(soc.spend / sc.vendas) : '—';
 
-      const setText = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = t; };
+      if (ca.vendas > 0) setCard('apl-crm-vendas', ca.vendas, apl.spend > 0 ? `CAC: ${aplCac}` : '—');
       setText('apl-crm-roas', aplRoas);
       setText('web-crm-roas', webRoas);
       setText('soc-crm-roas', socRoas);
 
-      // Visão Geral — tabela CAC/ROAS
-      const totalSpend = apl.spend + web.spend + soc.spend;
+      // ── Visão Geral ──
+      const totalSpend  = apl.spend + web.spend + soc.spend;
+      const totalVendas = ca.vendas + wc.vendas + sc.vendas;
+      const totalReceita = ca.receita + wc.receita + sc.receita;
+
+      const totalInvEl = document.querySelector('#ger .card .card-value');
+      if (totalInvEl && totalSpend > 0) totalInvEl.textContent = `R$ ${fmtNum(totalSpend)}`;
+
+      // CAC = investimento total / vendas totais (não receita/vendas)
+      const cacEl = document.getElementById('ger-cac');
+      if (cacEl) cacEl.textContent = totalVendas > 0 && totalSpend > 0 ? fmtBRL(totalSpend / totalVendas) : '—';
+
+      const roasEl = document.getElementById('ger-roas');
+      if (roasEl) roasEl.textContent = totalReceita > 0 && totalSpend > 0
+        ? (totalReceita / totalSpend).toFixed(1) + 'x' : '—';
+
+      // Tabela CAC/ROAS por funil
       setText('ger-apl-spend',   apl.spend > 0 ? `R$ ${fmtNum(apl.spend)}` : '—');
       setText('ger-apl-vendas',  ca.vendas);
       setText('ger-apl-cac',     aplCac);
       setText('ger-apl-receita', `R$ ${fmtNum(ca.receita)}`);
       setText('ger-apl-roas',    aplRoas);
       setText('ger-web-spend',   web.spend > 0 ? `R$ ${fmtNum(web.spend)}` : '—');
-      setText('ger-web-vendas',  crmData.webinario.vendas);
+      setText('ger-web-vendas',  wc.vendas);
       setText('ger-web-cac',     webCac);
-      setText('ger-web-receita', `R$ ${fmtNum(crmData.webinario.receita)}`);
+      setText('ger-web-receita', `R$ ${fmtNum(wc.receita)}`);
       setText('ger-web-roas',    webRoas);
       setText('ger-soc-spend',   soc.spend > 0 ? `R$ ${fmtNum(soc.spend)}` : '—');
-      setText('ger-soc-vendas',  crmData.social_selling.vendas);
+      setText('ger-soc-vendas',  sc.vendas);
       setText('ger-soc-cac',     socCac);
-      setText('ger-soc-receita', `R$ ${fmtNum(crmData.social_selling.receita)}`);
+      setText('ger-soc-receita', `R$ ${fmtNum(sc.receita)}`);
       setText('ger-soc-roas',    socRoas);
-
-      // Total investido na Visão Geral
-      const totalInvEl = document.querySelector('#ger .card .card-value');
-      if (totalInvEl && totalSpend > 0) totalInvEl.textContent = `R$ ${fmtNum(totalSpend)}`;
-
-      // ROAS geral
-      const totalReceita = ca.receita + crmData.webinario.receita + crmData.social_selling.receita;
-      const totalVendas  = ca.vendas  + crmData.webinario.vendas  + crmData.social_selling.vendas;
-      const roasEl = document.getElementById('ger-roas');
-      if (roasEl) roasEl.textContent = totalReceita > 0 && totalSpend > 0
-        ? (totalReceita / totalSpend).toFixed(1) + 'x' : '—';
     }
+
+    // Atualiza tabela de campanhas com dados reais
+    renderAllPerf(document.getElementById('globalPeriod')?.value || 'month');
   }
 
   // Busca dados da planilha Google Sheets
@@ -1075,38 +1098,39 @@
     const web = sheets.webinario;
     const soc = sheets.social_selling;
 
-    const leads    = web?.leads    ?? 0;
-    const presentes = web?.presentes ?? 0;
-    const abordados = soc?.abordados ?? 0;
+    const leads      = web?.leads      ?? 0;
+    const presentes  = web?.presentes  ?? 0;
+    const abordados  = soc?.abordados  ?? 0;
+    const seguidores = soc?.seguidores ?? 0;
 
     // Cards de Webinário
-    setCard('web-leads',    leads,    `do período selecionado`);
+    setCard('web-leads', leads, `do período selecionado`);
     setCard('web-presentes', presentes, presentes > 0 && leads > 0
-      ? `${Math.round(presentes / leads * 100)}% dos leads`
-      : '—');
+      ? `${Math.round(presentes / leads * 100)}% dos leads` : '—');
 
-    // CPL = Valor gasto (Meta, ainda mockado) / Leads planilha
-    // Por ora deixamos o cálculo para quando Meta conectar
-    const cplEl = document.getElementById('web-cpl');
-    if (cplEl) cplEl.querySelector('.card-value').textContent = '—';
-
-    // Card de Social Selling
-    setCard('soc-abordados', abordados, abordados > 0 ? `no período` : '—');
+    // Cards de Social Selling
+    setCard('soc-abordados',  abordados,  abordados  > 0 ? `no período` : '—');
+    if (seguidores > 0) {
+      const socSpendEl = document.getElementById('soc-spend');
+      const socSpend = socSpendEl ? parseFloat(socSpendEl.querySelector('.card-value')?.textContent?.replace(/[R$.\s]/g,'').replace(',','.')) : 0;
+      setCard('soc-seguidores', seguidores, 'via planilha');
+      setCard('soc-cps', seguidores > 0 && socSpend > 0 ? fmtBRL(socSpend / seguidores) : '—');
+    }
 
     // Reconstrói os funnels com dados reais de planilha + CRM
     if (crmData) {
       const webCrm = crmData.webinario;
       const socCrm = crmData.social_selling;
       buildFunnel('funnel-web', [
-        { label: 'Leads',            val: leads > 0 ? leads : null },
-        { label: 'Presentes',        val: presentes > 0 ? presentes : null },
+        { label: 'Leads',            val: leads      > 0 ? leads      : null },
+        { label: 'Presentes',        val: presentes  > 0 ? presentes  : null },
         { label: 'Calls agendadas',  val: webCrm.calls_agendadas },
         { label: 'Calls realizadas', val: webCrm.calls_realizadas },
         { label: 'Vendas',           val: webCrm.vendas }
       ]);
       buildFunnel('funnel-soc', [
-        { label: 'Novos seguidores', val: null },           // Meta Ads — em breve
-        { label: 'Abordados',        val: abordados > 0 ? abordados : null },
+        { label: 'Novos seguidores', val: seguidores > 0 ? seguidores : null },
+        { label: 'Abordados',        val: abordados  > 0 ? abordados  : null },
         { label: 'Calls agendadas',  val: socCrm.calls_agendadas },
         { label: 'Calls realizadas', val: socCrm.calls_realizadas },
         { label: 'Vendas',           val: socCrm.vendas }
@@ -1317,13 +1341,45 @@
     }).join('');
   }
 
+  // Converte campanhas reais do Meta no formato esperado por renderPerfTable
+  function buildRealPerfRows(campaigns) {
+    if (!campaigns || campaigns.length === 0) return null;
+    const active = campaigns.filter(c => c.spend > 0);
+    if (active.length === 0) return null;
+    const cpls = active.filter(c => c.leads > 0).map(c => c.spend / c.leads);
+    const avgCPL = cpls.length > 0 ? cpls.reduce((a, b) => a + b, 0) / cpls.length : 0;
+    return active
+      .sort((a, b) => (a.leads > 0 ? a.spend/a.leads : Infinity) - (b.leads > 0 ? b.spend/b.leads : Infinity))
+      .map(c => {
+        const cpl = c.leads > 0 ? c.spend / c.leads : null;
+        const pct = cpl && avgCPL > 0 ? Math.round(((cpl - avgCPL) / avgCPL) * 100) : 0;
+        const acao = pct <= -10 ? 'Aumentar orçamento' : pct >= 30 ? 'Pausar' : pct >= 10 ? 'Monitorar' : 'Manter';
+        return {
+          n:      c.name,
+          spend:  `R$ ${Math.round(c.spend).toLocaleString('pt-BR')}`,
+          conv:   c.leads,
+          metric: cpl ? fmtBRL(cpl) : '—',
+          pct,
+          acao
+        };
+      });
+  }
+
   function renderAllPerf(period) {
     const multipliers = { '7': 7/30, '14': 14/30, '30': 1, 'month': 1, 'year': 12, 'custom': 1 };
     const m = multipliers[period] !== undefined ? multipliers[period] : (parseInt(period) / 30) || 1;
+
+    const funnelKeys = { apl: 'aplicacao', web: 'webinario', soc: 'social_selling' };
     ['apl', 'web', 'soc'].forEach(k => {
-      ['camp', 'conj', 'criat'].forEach(t => {
-        renderPerfTable(`${k}-${t}-body`, perfData[k][t], m);
-      });
+      const realRows = _realMetaCamps ? buildRealPerfRows(_realMetaCamps[funnelKeys[k]]) : null;
+      if (realRows) {
+        renderPerfTable(`${k}-camp-body`, realRows, 1); // multiplier=1: dados já são do período real
+      } else {
+        renderPerfTable(`${k}-camp-body`, perfData[k].camp, m);
+      }
+      // Conjuntos e criativos ainda usam mock (requerem chamada de nível adset/ad)
+      renderPerfTable(`${k}-conj-body`,  perfData[k].conj,  m);
+      renderPerfTable(`${k}-criat-body`, perfData[k].criat, m);
     });
     const days = period === 'year' ? 365 : period === 'month' ? 30 : parseInt(period) || 30;
     renderLineCharts(days);
@@ -1369,17 +1425,20 @@
 
   renderAllPerf('month');
 
-  // Carrega dados reais ao abrir o dashboard (Pipedrive + Sheets em paralelo)
+  // Carrega dados reais ao abrir o dashboard
   (async () => {
     const { since, until } = getPeriodDates('month');
-    const [crmResult, sheetsResult] = await Promise.allSettled([
+    const [crmResult, sheetsResult, metaResult] = await Promise.allSettled([
       fetchPipedrive(since, until),
-      fetchSheets(since, until)
+      fetchSheets(since, until),
+      fetchMeta(since, until)
     ]);
-    if (crmResult.status === 'fulfilled') applyPipedriveData(crmResult.value);
+    if (crmResult.status   === 'fulfilled') applyPipedriveData(crmResult.value);
     else console.error('Pipedrive:', crmResult.reason?.message);
     if (sheetsResult.status === 'fulfilled') applySheetData(sheetsResult.value, crmResult.value);
-    else console.warn('Sheets ainda não configurado:', sheetsResult.reason?.message);
+    else console.warn('Sheets:', sheetsResult.reason?.message);
+    if (metaResult.status  === 'fulfilled') applyMetaData(metaResult.value, crmResult.value);
+    else console.error('Meta Ads:', metaResult.reason?.message);
     updateTimestamp();
   })();
 </script>

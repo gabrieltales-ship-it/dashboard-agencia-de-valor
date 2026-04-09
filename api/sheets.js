@@ -51,12 +51,13 @@ export default async function handler(req, res) {
     // Lê as duas abas em paralelo (ignora a linha de cabeçalho — range começa na linha 2)
     const [webRows, socRows] = await Promise.all([
       getRange(spreadsheetId, 'Webinário!A2:C',      apiKey),
-      getRange(spreadsheetId, 'Social Selling!A2:B', apiKey)
+      getRange(spreadsheetId, 'Social Selling!A2:C', apiKey)
     ]);
 
     const leads_web   = sumInPeriod(webRows, 0, 1, sinceTs, untilTs);  // col B
     const presentes   = sumInPeriod(webRows, 0, 2, sinceTs, untilTs);  // col C
     const abordados   = sumInPeriod(socRows, 0, 1, sinceTs, untilTs);  // col B
+    const seguidores  = sumInPeriod(socRows, 0, 2, sinceTs, untilTs);  // col C
 
     return res.status(200).json({
       source: 'google_sheets',
@@ -66,7 +67,8 @@ export default async function handler(req, res) {
         presentes: presentes
       },
       social_selling: {
-        abordados: abordados
+        abordados:  abordados,
+        seguidores: seguidores
       }
     });
 
