@@ -894,7 +894,7 @@
     if (cplEl) cplEl.querySelector('.card-value').textContent =
       (web.spend > 0 && web.leads > 0) ? fmtBRL(web.spend / web.leads) : '—';
 
-    // ── Social Selling ──
+    // ── Social Selling (só spend — seguidores e custo/seguidor vêm da planilha) ──
     setVal('soc-spend', soc.spend > 0 ? `R$ ${fmtNum(soc.spend)}` : '—');
 
     if (crmData) {
@@ -913,6 +913,13 @@
       if (wc.calls_realizadas > 0) setSub('web-crm-calls-real',  web.spend > 0 ? `${fmtBRL(web.spend / wc.calls_realizadas)}/call` : '—');
       if (sc.calls_agendadas  > 0) setSub('soc-crm-calls-agend', soc.spend > 0 ? `${fmtBRL(soc.spend / sc.calls_agendadas)}/call` : '—');
       if (sc.calls_realizadas > 0) setSub('soc-crm-calls-real',  soc.spend > 0 ? `${fmtBRL(soc.spend / sc.calls_realizadas)}/call` : '—');
+
+      // Custo/seguidor: recalcula aqui pois já temos o spend e o card pode ter sido preenchido pela planilha
+      if (soc.spend > 0) {
+        const segEl = document.getElementById('soc-seguidores');
+        const segVal = segEl ? parseInt(segEl.querySelector('.card-value')?.textContent?.replace(/\D/g,'')) : 0;
+        if (segVal > 0) setVal('soc-cps', fmtBRL(soc.spend / segVal));
+      }
 
       // ── CAC e ROAS por funil ──
       const aplRoas = ca.receita > 0 && apl.spend > 0 ? (ca.receita / apl.spend).toFixed(1) + 'x' : '—';
