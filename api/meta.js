@@ -83,11 +83,12 @@ async function getFunnelInsights(adAccountId, campaignIds, since, until, token) 
     seguidores += rowSegs;
 
     campaigns.push({
-      id:    row.campaign_id,
-      name:  row.campaign_name,
-      spend: Math.round(rowSpend * 100) / 100,
-      leads: rowLeads,
-      mqls:  rowMqls,
+      id:      row.campaign_id,
+      name:    row.campaign_name,
+      spend:   Math.round(rowSpend * 100) / 100,
+      leads:   rowLeads,
+      mqls:    rowMqls,
+      _actions: (row.actions || []).map(a => ({ type: a.action_type, value: a.value })),
     });
   }
 
