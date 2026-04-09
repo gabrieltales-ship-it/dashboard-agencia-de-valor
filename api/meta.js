@@ -106,11 +106,14 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
 
   const token       = process.env.META_TOKEN;
-  const adAccountId = process.env.META_AD_ACCOUNT_ID; // formato: act_XXXXXXXXX
+  const rawId       = process.env.META_AD_ACCOUNT_ID;
 
-  if (!token || !adAccountId) {
+  if (!token || !rawId) {
     return res.status(500).json({ error: 'META_TOKEN ou META_AD_ACCOUNT_ID não configurados' });
   }
+
+  // Garante o prefixo act_ independente de como foi salvo no Vercel
+  const adAccountId = rawId.startsWith('act_') ? rawId : `act_${rawId}`;
 
   const { since, until } = req.query;
   if (!since || !until) {
