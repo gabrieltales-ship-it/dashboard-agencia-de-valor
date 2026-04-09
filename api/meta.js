@@ -39,9 +39,21 @@ function sumActions(actions, ...types) {
     .reduce((sum, a) => sum + (parseInt(a.value, 10) || 0), 0);
 }
 
+// ─── Busca o action_type da Custom Conversion "MQL" ─────────────────────────
+
+async function getMqlActionType(adAccountId, token) {
+  const url = `${BASE}/${adAccountId}/customconversions?fields=id,name&limit=100&access_token=${token}`;
+  const res  = await fetch(url);
+  const json = await res.json();
+  if (json.error || !json.data) return null;
+  const mql = json.data.find(c => c.name.trim().toUpperCase() === 'MQL');
+  if (!mql) return null;
+  return `offsite_conversion.custom.${mql.id}`;
+}
+
 // ─── Busca insights agregados para uma lista de campaign IDs ─────────────────
 
-async function getFunnelInsights(adAccountId, campaignIds, since, until, token) {
+async function getFunnelInsights(adAccountId, campaignIds, since, until, token, mqlActionType) {
   if (campaignIds.length === 0) {
     return { spend: 0, leads: 0, mqls: 0, seguidores: 0, campaigns: [] };
   }
@@ -68,13 +80,14 @@ async function getFunnelInsights(adAccountId, campaignIds, since, until, token) 
   for (const row of rows) {
     const rowSpend = parseFloat(row.spend || 0);
     const rowLeads = sumActions(row.actions, 'lead');
-    const rowMqls  = sumActions(row.actions,
-      'offsite_conversion.custom.MQL',
-      'MQL'
-    );
+    const mqlTypes = ['offsite_conversion.custom.MQL', 'MQL'];
+    if (mqlActionType) mqlTypes.unshift(mqlActionType);
+    const rowMqls  = sumActions(row.actions, ...mqlTypes);
+
     const rowSegs  = sumActions(row.actions,
       'onsite_conversion.follow',
-      'page_fan_adds'
+      'page_fan_adds',
+      'follow'
     );
 
     spend      += rowSpend;
@@ -139,11 +152,13 @@ export default async function handler(req, res) {
       else if (c.name.includes('Tráfego')) funnelIds.social_selling.push(c.id);
     }
 
-    // 3. Busca insights de cada funil em paralelo
+    // 3. Busca o action_type do MQL e os insights de cada funil
+    const mqlActionType = await getMqlActionType(adAccountId, token);
+
     const [aplData, webData, socData] = await Promise.all([
-      getFunnelInsights(adAccountId, funnelIds.aplicacao,      since, until, token),
-      getFunnelInsights(adAccountId, funnelIds.webinario,      since, until, token),
-      getFunnelInsights(adAccountId, funnelIds.social_selling, since, until, token),
+      getFunnelInsights(adAccountId, funnelIds.aplicacao,      since, until, token, mqlActionType),
+      getFunnelInsights(adAccountId, funnelIds.webinario,      since, until, token, mqlActionType),
+      getFunnelInsights(adAccountId, funnelIds.social_selling, since, until, token, mqlActionType),
     ]);
 
     return res.status(200).json({
@@ -163,6 +178,7 @@ export default async function handler(req, res) {
         seguidores: socData.seguidores,
       },
       _debug: {
+        mqlActionType,
         totalCampaigns: allCampaigns.length,
         funnelCounts: {
           aplicacao:      funnelIds.aplicacao.length,
