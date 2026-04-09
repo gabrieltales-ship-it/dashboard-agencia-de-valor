@@ -636,7 +636,7 @@
   <!-- ===== ABA WEBINÁRIO ===== -->
   <div class="panel" id="web">
     <div class="cards">
-      <div class="card"><div class="card-label">Valor gasto</div><div class="card-value">R$ 9.150</div><div class="card-sub">campanhas "web"</div></div>
+      <div class="card" id="web-spend"><div class="card-label">Valor gasto</div><div class="card-value">R$ 9.150</div><div class="card-sub">campanhas "web"</div></div>
       <div class="card crm-card" id="web-leads"><div class="card-label">Leads <span class="manual-badge">planilha</span></div><div class="card-value">—</div><div class="card-sub">—</div></div>
       <div class="card" id="web-cpl"><div class="card-label">CPL</div><div class="card-value">—</div></div>
       <div class="card crm-card" id="web-presentes" style="border-color:#FC8338"><div class="card-label">Presentes <span class="manual-badge">planilha</span></div><div class="card-value">—</div><div class="card-sub">—</div></div>
@@ -700,9 +700,9 @@
   <!-- ===== ABA SOCIAL SELLING ===== -->
   <div class="panel" id="soc">
     <div class="cards">
-      <div class="card"><div class="card-label">Valor gasto</div><div class="card-value">R$ 4.280</div><div class="card-sub">campanhas "Tráfego"</div></div>
-      <div class="card"><div class="card-label">Novos seguidores</div><div class="card-value">2.841</div><div class="card-sub">métrica nativa Meta</div></div>
-      <div class="card"><div class="card-label">Custo/seguidor</div><div class="card-value">R$ 1,5</div></div>
+      <div class="card" id="soc-spend"><div class="card-label">Valor gasto</div><div class="card-value">R$ 4.280</div><div class="card-sub">campanhas "Tráfego"</div></div>
+      <div class="card" id="soc-seguidores"><div class="card-label">Novos seguidores</div><div class="card-value">2.841</div><div class="card-sub">métrica nativa Meta</div></div>
+      <div class="card" id="soc-cps"><div class="card-label">Custo/seguidor</div><div class="card-value">R$ 1,5</div></div>
       <div class="card crm-card" id="soc-abordados" style="border-color:#FC8338"><div class="card-label">Abordados <span class="manual-badge">planilha</span></div><div class="card-value">—</div><div class="card-sub">—</div></div>
       <div class="card crm-card" id="soc-crm-calls-agend"><div class="card-label">Calls agendadas</div><div class="card-value">—</div><div class="card-sub">—</div></div>
       <div class="card crm-card" id="soc-crm-calls-real"><div class="card-label">Calls realizadas</div><div class="card-value">—</div><div class="card-sub">—</div></div>
@@ -783,10 +783,10 @@
       <div class="section-title">CAC e ROAS por funil</div>
       <table>
         <thead><tr><th>Funil</th><th>Investido</th><th>Vendas</th><th>CAC</th><th>Receita est.</th><th>ROAS</th></tr></thead>
-        <tbody>
-          <tr><td>Aplicação</td><td>R$ 18.420</td><td>12</td><td>R$ 1.535</td><td>R$ 77.364</td><td>4,2x</td></tr>
-          <tr><td>Webinário</td><td>R$ 9.150</td><td>18</td><td>R$ 508</td><td>R$ 55.815</td><td>6,1x</td></tr>
-          <tr><td>Social Selling</td><td>R$ 4.280</td><td>7</td><td>R$ 611</td><td>R$ 16.264</td><td>3,8x</td></tr>
+        <tbody id="ger-cac-table-body">
+          <tr><td>Aplicação</td><td id="ger-apl-spend">—</td><td id="ger-apl-vendas">—</td><td id="ger-apl-cac">—</td><td id="ger-apl-receita">—</td><td id="ger-apl-roas">—</td></tr>
+          <tr><td>Webinário</td><td id="ger-web-spend">—</td><td id="ger-web-vendas">—</td><td id="ger-web-cac">—</td><td id="ger-web-receita">—</td><td id="ger-web-roas">—</td></tr>
+          <tr><td>Social Selling</td><td id="ger-soc-spend">—</td><td id="ger-soc-vendas">—</td><td id="ger-soc-cac">—</td><td id="ger-soc-receita">—</td><td id="ger-soc-roas">—</td></tr>
         </tbody>
       </table>
     </div>
@@ -849,6 +849,94 @@
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     return data;
+  }
+
+  // Busca dados reais do Meta Ads
+  async function fetchMeta(since, until) {
+    const res  = await fetch(`/api/meta?since=${since}&until=${until}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    return data;
+  }
+
+  // Atualiza cards com dados reais do Meta Ads
+  function applyMetaData(meta, crmData) {
+    const apl = meta.aplicacao;
+    const web = meta.webinario;
+    const soc = meta.social_selling;
+
+    const setVal = (id, text) => {
+      const el = document.getElementById(id);
+      if (el) el.querySelector('.card-value').textContent = text;
+    };
+
+    // ── Aplicação ──
+    setVal('apl-spend',  apl.spend  > 0 ? `R$ ${fmtNum(apl.spend)}`  : '—');
+    setVal('apl-leads',  apl.leads  > 0 ? apl.leads  : '—');
+    setVal('apl-mqls',   apl.mqls   > 0 ? apl.mqls   : '—');
+    setVal('apl-cpl',    apl.leads  > 0 ? fmtBRL(apl.spend / apl.leads)  : '—');
+    setVal('apl-cpmql',  apl.mqls   > 0 ? fmtBRL(apl.spend / apl.mqls)   : '—');
+
+    // ── Webinário ──
+    setVal('web-spend', web.spend > 0 ? `R$ ${fmtNum(web.spend)}` : '—');
+    const cplEl = document.getElementById('web-cpl');
+    if (cplEl) cplEl.querySelector('.card-value').textContent =
+      (web.spend > 0 && web.leads > 0) ? fmtBRL(web.spend / web.leads) : '—';
+
+    // ── Social Selling ──
+    setVal('soc-spend',      soc.spend      > 0 ? `R$ ${fmtNum(soc.spend)}`            : '—');
+    setVal('soc-seguidores', soc.seguidores > 0 ? soc.seguidores                        : '—');
+    setVal('soc-cps',        soc.seguidores > 0 ? fmtBRL(soc.spend / soc.seguidores)   : '—');
+
+    // ── Cards CRM com CPL/CAC calculados agora que temos o spend ──
+    if (crmData) {
+      const ca = crmData.aplicacao;
+      if (ca.leads > 0)          setCard('apl-crm-leads', ca.leads, apl.spend > 0 ? `CPL CRM: ${fmtBRL(apl.spend / ca.leads)}` : '—');
+      if (ca.mqls  > 0)          setCard('apl-crm-mqls',  ca.mqls,  apl.spend > 0 ? `Custo/MQL: ${fmtBRL(apl.spend / ca.mqls)}` : '—');
+      if (ca.vendas > 0)         setCard('apl-crm-vendas', ca.vendas, apl.spend > 0 ? `CAC: ${fmtBRL(apl.spend / ca.vendas)}` : '—');
+
+      // ROAS
+      const aplRoas = ca.receita > 0 && apl.spend > 0 ? (ca.receita / apl.spend).toFixed(1) + 'x' : '—';
+      const webRoas = crmData.webinario.receita > 0 && web.spend > 0 ? (crmData.webinario.receita / web.spend).toFixed(1) + 'x' : '—';
+      const socRoas = crmData.social_selling.receita > 0 && soc.spend > 0 ? (crmData.social_selling.receita / soc.spend).toFixed(1) + 'x' : '—';
+      const aplCac  = ca.vendas > 0 && apl.spend > 0 ? fmtBRL(apl.spend / ca.vendas) : '—';
+      const webCac  = crmData.webinario.vendas > 0 && web.spend > 0 ? fmtBRL(web.spend / crmData.webinario.vendas) : '—';
+      const socCac  = crmData.social_selling.vendas > 0 && soc.spend > 0 ? fmtBRL(soc.spend / crmData.social_selling.vendas) : '—';
+
+      const setText = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = t; };
+      setText('apl-crm-roas', aplRoas);
+      setText('web-crm-roas', webRoas);
+      setText('soc-crm-roas', socRoas);
+
+      // Visão Geral — tabela CAC/ROAS
+      const totalSpend = apl.spend + web.spend + soc.spend;
+      setText('ger-apl-spend',   apl.spend > 0 ? `R$ ${fmtNum(apl.spend)}` : '—');
+      setText('ger-apl-vendas',  ca.vendas);
+      setText('ger-apl-cac',     aplCac);
+      setText('ger-apl-receita', `R$ ${fmtNum(ca.receita)}`);
+      setText('ger-apl-roas',    aplRoas);
+      setText('ger-web-spend',   web.spend > 0 ? `R$ ${fmtNum(web.spend)}` : '—');
+      setText('ger-web-vendas',  crmData.webinario.vendas);
+      setText('ger-web-cac',     webCac);
+      setText('ger-web-receita', `R$ ${fmtNum(crmData.webinario.receita)}`);
+      setText('ger-web-roas',    webRoas);
+      setText('ger-soc-spend',   soc.spend > 0 ? `R$ ${fmtNum(soc.spend)}` : '—');
+      setText('ger-soc-vendas',  crmData.social_selling.vendas);
+      setText('ger-soc-cac',     socCac);
+      setText('ger-soc-receita', `R$ ${fmtNum(crmData.social_selling.receita)}`);
+      setText('ger-soc-roas',    socRoas);
+
+      // Total investido na Visão Geral
+      const totalInvEl = document.querySelector('#ger .card .card-value');
+      if (totalInvEl && totalSpend > 0) totalInvEl.textContent = `R$ ${fmtNum(totalSpend)}`;
+
+      // ROAS geral
+      const totalReceita = ca.receita + crmData.webinario.receita + crmData.social_selling.receita;
+      const totalVendas  = ca.vendas  + crmData.webinario.vendas  + crmData.social_selling.vendas;
+      const roasEl = document.getElementById('ger-roas');
+      if (roasEl) roasEl.textContent = totalReceita > 0 && totalSpend > 0
+        ? (totalReceita / totalSpend).toFixed(1) + 'x' : '—';
+    }
   }
 
   // Busca dados da planilha Google Sheets
@@ -1032,10 +1120,11 @@
     const { since, until } = getPeriodDates(period);
 
     try {
-      // Busca Pipedrive e Sheets em paralelo
-      const [crmData, sheetsData] = await Promise.allSettled([
+      // Busca Pipedrive, Sheets e Meta em paralelo
+      const [crmData, sheetsData, metaData] = await Promise.allSettled([
         fetchPipedrive(since, until),
-        fetchSheets(since, until)
+        fetchSheets(since, until),
+        fetchMeta(since, until)
       ]);
 
       if (crmData.status === 'fulfilled') applyPipedriveData(crmData.value);
@@ -1043,6 +1132,9 @@
 
       if (sheetsData.status === 'fulfilled') applySheetData(sheetsData.value, crmData.value);
       else console.warn('Sheets ainda não configurado:', sheetsData.reason?.message);
+
+      if (metaData.status === 'fulfilled') applyMetaData(metaData.value, crmData.value);
+      else console.error('Meta Ads:', metaData.reason?.message);
 
       renderAllPerf(period);
       updateTimestamp();
