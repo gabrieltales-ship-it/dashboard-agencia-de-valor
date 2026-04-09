@@ -865,9 +865,12 @@
     const web = meta.webinario;
     const soc = meta.social_selling;
 
+    // IDs podem estar no .card-value diretamente (apl-*) ou no .card pai (web-*, soc-*)
     const setVal = (id, text) => {
       const el = document.getElementById(id);
-      if (el) el.querySelector('.card-value').textContent = text;
+      if (!el) return;
+      if (el.classList.contains('card-value')) el.textContent = text;
+      else { const v = el.querySelector('.card-value'); if (v) v.textContent = text; }
     };
 
     // ── Aplicação ──
