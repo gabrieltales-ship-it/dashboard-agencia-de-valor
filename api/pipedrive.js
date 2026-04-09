@@ -175,8 +175,9 @@ function calcFunnelMetrics(allDeals, funnelDealIds, stageIds, budgetKey, mqlIds,
   });
   const vendas  = wonDeals.length;
   const receita = wonDeals.reduce((sum, d) => sum + (parseFloat(d.value) || 0), 0);
+  const wonList = wonDeals.map(d => ({ id: d.id, title: d.title, value: parseFloat(d.value) || 0, won_time: d.won_time }));
 
-  return { leads, mqls, calls_agendadas, calls_realizadas, vendas, receita };
+  return { leads, mqls, calls_agendadas, calls_realizadas, vendas, receita, wonList };
 }
 
 // ─── Handler principal ────────────────────────────────────────────────────────

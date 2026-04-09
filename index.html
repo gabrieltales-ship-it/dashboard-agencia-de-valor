@@ -579,6 +579,14 @@
       <div class="funnel-wrap" id="funnel-apl"></div>
     </div>
 
+    <div class="section" id="section-won-apl" style="display:none">
+      <div class="section-title">Negócios ganhos no período — Aplicação</div>
+      <table>
+        <thead><tr><th style="width:60%">Negócio</th><th>Valor</th><th>Data do ganho</th></tr></thead>
+        <tbody id="won-apl-body"></tbody>
+      </table>
+    </div>
+
     <div class="chart-row">
       <div class="chart-box"><div class="chart-title">Spend diário</div><canvas id="ca-spend" height="140"></canvas></div>
       <div class="chart-box"><div class="chart-title">Leads e MQLs diários</div><canvas id="ca-leads" height="140"></canvas></div>
@@ -644,6 +652,14 @@
       <div class="funnel-wrap" id="funnel-web"></div>
     </div>
 
+    <div class="section" id="section-won-web" style="display:none">
+      <div class="section-title">Negócios ganhos no período — Webinário</div>
+      <table>
+        <thead><tr><th style="width:60%">Negócio</th><th>Valor</th><th>Data do ganho</th></tr></thead>
+        <tbody id="won-web-body"></tbody>
+      </table>
+    </div>
+
     <div class="chart-row">
       <div class="chart-box"><div class="chart-title">Spend diário</div><canvas id="cw-spend" height="140"></canvas></div>
       <div class="chart-box"><div class="chart-title">Leads diários</div><canvas id="cw-leads" height="140"></canvas></div>
@@ -698,6 +714,14 @@
     <div class="section">
       <div class="section-title">Funil — Social Selling <span class="manual-badge">abordados via planilha</span></div>
       <div class="funnel-wrap" id="funnel-soc"></div>
+    </div>
+
+    <div class="section" id="section-won-soc" style="display:none">
+      <div class="section-title">Negócios ganhos no período — Social Selling</div>
+      <table>
+        <thead><tr><th style="width:60%">Negócio</th><th>Valor</th><th>Data do ganho</th></tr></thead>
+        <tbody id="won-soc-body"></tbody>
+      </table>
     </div>
 
     <div class="chart-row">
@@ -880,6 +904,11 @@
     if (cacEl)  cacEl.textContent  = totalVendas > 0 ? fmtBRL(totalReceita / totalVendas) : '—';
     if (roasEl) roasEl.textContent = '—'; // será calculado quando Meta Ads estiver conectado
 
+    // ── Negócios ganhos por funil ──
+    renderWonDeals('won-apl-body', 'section-won-apl', apl.wonList);
+    renderWonDeals('won-web-body', 'section-won-web', web.wonList);
+    renderWonDeals('won-soc-body', 'section-won-soc', soc.wonList);
+
     // ── Funnels individuais com dados reais do CRM ──
     buildFunnel('funnel-apl', [
       { label: 'Leads CRM',        val: apl.leads },
@@ -910,6 +939,25 @@
       { label: 'Calls realizadas', val: apl.calls_realizadas + web.calls_realizadas + soc.calls_realizadas },
       { label: 'Vendas', val: apl.vendas + web.vendas + soc.vendas }
     ]);
+  }
+
+  function renderWonDeals(tbodyId, sectionId, wonList) {
+    const section = document.getElementById(sectionId);
+    const tbody   = document.getElementById(tbodyId);
+    if (!section || !tbody) return;
+    if (!wonList || wonList.length === 0) {
+      section.style.display = 'none';
+      return;
+    }
+    section.style.display = '';
+    tbody.innerHTML = wonList.map(d => {
+      const date = d.won_time ? new Date(d.won_time).toLocaleDateString('pt-BR') : '—';
+      return `<tr>
+        <td>${d.title || '—'}</td>
+        <td>R$ ${fmtNum(d.value)}</td>
+        <td>${date}</td>
+      </tr>`;
+    }).join('');
   }
 
   function setCard(id, value, sub) {
