@@ -934,6 +934,7 @@
       const socCac  = sc.vendas > 0 && soc.spend > 0 ? fmtBRL(soc.spend / sc.vendas) : '—';
 
       if (ca.vendas > 0) setCard('apl-crm-vendas', ca.vendas, apl.spend > 0 ? `CAC: ${aplCac}` : '—');
+      if (sc.vendas > 0) setCard('soc-crm-vendas', sc.vendas, soc.spend > 0 ? `CAC: ${socCac}` : '—');
       setText('apl-crm-roas', aplRoas);
       setText('web-crm-roas', webRoas);
       setText('soc-crm-roas', socRoas);

@@ -45,7 +45,11 @@ export default async function handler(req, res) {
   }
 
   const sinceTs = new Date(since).getTime();
-  const untilTs = new Date(until + 'T23:59:59').getTime();
+  // Estende until até o último dia do mês, para capturar dados inseridos
+  // com data futura dentro do mesmo mês (ex: dados de 11/04 ao filtrar "Este mês")
+  const untilDate = new Date(until);
+  const endOfMonth = new Date(untilDate.getFullYear(), untilDate.getMonth() + 1, 0, 23, 59, 59);
+  const untilTs = endOfMonth.getTime();
 
   try {
     // Lê as duas abas em paralelo (ignora a linha de cabeçalho — range começa na linha 2)
