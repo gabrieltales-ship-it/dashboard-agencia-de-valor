@@ -760,7 +760,7 @@
     <div class="cards">
       <div class="card"><div class="card-label">Total investido</div><div class="card-value">R$ 31.850</div><div class="card-sub">todos os funis</div></div>
       <div class="card crm-card" id="ger-entradas"><div class="card-label">Entradas no CRM</div><div class="card-value">—</div><div class="card-sub">leads no Pipedrive</div></div>
-      <div class="card"><div class="card-label">CPL geral</div><div class="card-value">—</div><div class="card-sub">invest. ÷ entradas CRM</div></div>
+      <div class="card" id="ger-cpl"><div class="card-label">CPL geral</div><div class="card-value">—</div><div class="card-sub">invest. ÷ entradas CRM</div></div>
       <div class="card crm-card" id="ger-calls-agend"><div class="card-label">Calls agendadas</div><div class="card-value">—</div><div class="card-sub">—</div></div>
       <div class="card crm-card" id="ger-calls-real"><div class="card-label">Calls realizadas</div><div class="card-value">—</div><div class="card-sub">—</div></div>
       <div class="card crm-card" id="ger-vendas"><div class="card-label">Vendas totais</div><div class="card-value">—</div></div>
@@ -945,6 +945,20 @@
 
       const totalInvEl = document.querySelector('#ger .card .card-value');
       if (totalInvEl && totalSpend > 0) totalInvEl.textContent = `R$ ${fmtNum(totalSpend)}`;
+
+      // CPL geral = investimento total / entradas no CRM
+      const totalLeadsCRM = crmData.total_leads_crm || (ca.leads + wc.leads + sc.leads);
+      const cplGerEl = document.getElementById('ger-cpl');
+      if (cplGerEl) {
+        const cplGerValEl = cplGerEl.querySelector('.card-value');
+        if (cplGerValEl) cplGerValEl.textContent = totalLeadsCRM > 0 && totalSpend > 0 ? fmtBRL(totalSpend / totalLeadsCRM) : '—';
+      }
+
+      // Custo por call na visão geral
+      const totalCallsAgend = ca.calls_agendadas + wc.calls_agendadas + sc.calls_agendadas;
+      const totalCallsReal  = ca.calls_realizadas + wc.calls_realizadas + sc.calls_realizadas;
+      if (totalCallsAgend > 0 && totalSpend > 0) setSub('ger-calls-agend', `${fmtBRL(totalSpend / totalCallsAgend)}/call`);
+      if (totalCallsReal  > 0 && totalSpend > 0) setSub('ger-calls-real',  `${fmtBRL(totalSpend / totalCallsReal)}/call`);
 
       // CAC = investimento total / vendas totais (não receita/vendas)
       const cacEl = document.getElementById('ger-cac');
