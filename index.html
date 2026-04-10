@@ -895,8 +895,12 @@
     // ── Webinário ──
     setVal('web-spend', web.spend > 0 ? `R$ ${fmtNum(web.spend)}` : '—');
     const cplEl = document.getElementById('web-cpl');
-    if (cplEl) cplEl.querySelector('.card-value').textContent =
-      (web.spend > 0 && web.leads > 0) ? fmtBRL(web.spend / web.leads) : '—';
+    if (cplEl) {
+      const webLeadsText = document.getElementById('web-leads')?.querySelector('.card-value')?.textContent || '';
+      const webLeads = parseInt(webLeadsText.replace(/\D/g, ''), 10) || 0;
+      cplEl.querySelector('.card-value').textContent =
+        (web.spend > 0 && webLeads > 0) ? fmtBRL(web.spend / webLeads) : '—';
+    }
 
     // ── Social Selling (só spend — seguidores e custo/seguidor vêm da planilha) ──
     setVal('soc-spend', soc.spend > 0 ? `R$ ${fmtNum(soc.spend)}` : '—');
