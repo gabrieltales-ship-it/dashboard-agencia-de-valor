@@ -1146,6 +1146,7 @@
     const socSpend = socSpendEl ? parseFloat(socSpendEl.querySelector('.card-value')?.textContent?.replace(/[R$.\s]/g,'').replace(',','.')) : 0;
     setCard('soc-seguidores', seguidores > 0 ? seguidores : '—', 'via planilha');
     if (seguidores > 0 && socSpend > 0) setCard('soc-cps', fmtBRL(socSpend / seguidores));
+    else setCard('soc-cps', '—');
 
     // Reconstrói os funnels com dados reais de planilha + CRM
     if (crmData) {
