@@ -159,6 +159,39 @@ async function getInsightsByLevel(adAccountId, campaignIds, level, since, until,
   });
 }
 
+// ─── Busca spend diário para uma lista de campaign IDs ───────────────────────
+
+async function getDailySpend(adAccountId, campaignIds, since, until, token) {
+  if (campaignIds.length === 0) return [];
+
+  const timeRange = JSON.stringify({ since, until });
+  const filtering = JSON.stringify([
+    { field: 'campaign.id', operator: 'IN', value: campaignIds }
+  ]);
+
+  const url = `${BASE}/${adAccountId}/insights`
+    + `?level=campaign`
+    + `&fields=spend`
+    + `&time_range=${encodeURIComponent(timeRange)}`
+    + `&time_increment=1`
+    + `&filtering=${encodeURIComponent(filtering)}`
+    + `&limit=500`
+    + `&access_token=${token}`;
+
+  const rows = await fetchAllPages(url);
+
+  // Agrupa por data (pode haver múltiplas campanhas por dia)
+  const byDate = {};
+  for (const row of rows) {
+    const date = row.date_start;
+    byDate[date] = (byDate[date] || 0) + parseFloat(row.spend || 0);
+  }
+
+  return Object.entries(byDate)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, spend]) => ({ date, spend: Math.round(spend * 100) / 100 }));
+}
+
 // ─── Handler principal ────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
@@ -205,11 +238,12 @@ export default async function handler(req, res) {
     // 3. Busca o action_type do MQL
     const mqlActionType = await getMqlActionType(adAccountId, token);
 
-    // 4. Insights de campanha, adset e ad — todos em paralelo
+    // 4. Insights de campanha, adset, ad e breakdown diário — todos em paralelo
     const [
       aplData, webData, socData,
       aplAdsets, webAdsets, socAdsets,
       aplAds, webAds, socAds,
+      aplDaily,
     ] = await Promise.all([
       getFunnelInsights(adAccountId, funnelIds.aplicacao,      since, until, token, mqlActionType, budgetMap),
       getFunnelInsights(adAccountId, funnelIds.webinario,      since, until, token, mqlActionType, budgetMap),
@@ -220,6 +254,7 @@ export default async function handler(req, res) {
       getInsightsByLevel(adAccountId, funnelIds.aplicacao,      'ad',    since, until, token, mqlActionType),
       getInsightsByLevel(adAccountId, funnelIds.webinario,      'ad',    since, until, token, mqlActionType),
       getInsightsByLevel(adAccountId, funnelIds.social_selling, 'ad',    since, until, token, mqlActionType),
+      getDailySpend(adAccountId, funnelIds.aplicacao, since, until, token),
     ]);
 
     return res.status(200).json({
@@ -232,6 +267,7 @@ export default async function handler(req, res) {
         campaigns: aplData.campaigns,
         adsets:    aplAdsets,
         ads:       aplAds,
+        daily:     aplDaily,
       },
       webinario: {
         spend:     webData.spend,

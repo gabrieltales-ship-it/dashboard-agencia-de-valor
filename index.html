@@ -856,12 +856,18 @@
 
   // Campanhas reais do Meta (preenchido por applyMetaData, usado por renderAllPerf)
   let _realMetaCamps = null;
+  // Dados diários reais para gráficos da aba Aplicação
+  let _aplDailySpend = null;  // [{date, spend}] — Meta
+  let _aplDailyLeads = null;  // [{date, leads, mqls}] — Pipedrive
 
   // Atualiza cards com dados reais do Meta Ads
   function applyMetaData(meta, crmData) {
     const apl = meta.aplicacao;
     const web = meta.webinario;
     const soc = meta.social_selling;
+
+    // Armazena dados diários de spend da Aplicação para o gráfico
+    if (meta.aplicacao.daily?.length > 0) _aplDailySpend = meta.aplicacao.daily;
 
     // Armazena campanhas/adsets/ads para renderAllPerf e tabelas fixas
     _realMetaCamps = {
@@ -1083,6 +1089,9 @@
       { label: 'Calls realizadas', val: apl.calls_realizadas + web.calls_realizadas + soc.calls_realizadas },
       { label: 'Vendas', val: apl.vendas + web.vendas + soc.vendas }
     ]);
+
+    // Armazena dados diários de leads/MQLs da Aplicação para o gráfico
+    if (data.aplicacao.daily?.length > 0) _aplDailyLeads = data.aplicacao.daily;
   }
 
   function renderWonDeals(tbodyId, sectionId, wonList) {
@@ -1176,6 +1185,10 @@
 
     const period = document.getElementById('globalPeriod').value;
     const { since, until } = getPeriodDates(period);
+
+    // Reseta dados diários para que um período sem dados não mostre dados antigos
+    _aplDailySpend = null;
+    _aplDailyLeads = null;
 
     try {
       // Busca Pipedrive, Sheets e Meta em paralelo
@@ -1305,8 +1318,22 @@
 
   function renderLineCharts(days) {
     const d = days || 30, l = getDays(d);
-    makeChart('ca-spend', 'line', l, [{ data: seed(620*(d/30), 180*(d/30), d), borderColor: '#FC8338', label: 'Spend R$', tension: 0.3, pointRadius: 0, borderWidth: 2, fill: true, backgroundColor: 'rgba(252,131,56,0.08)' }]);
-    makeChart('ca-leads', 'line', l, [{ data: seed(11*(d/30), 4*(d/30), d), borderColor: '#4ade80', label: 'Leads', tension: 0.3, pointRadius: 0, borderWidth: 2 }, { data: seed(3*(d/30), 1*(d/30), d), borderColor: '#60a5fa', label: 'MQLs', tension: 0.3, pointRadius: 0, borderWidth: 2 }]);
+
+    // ca-spend: dados reais do Meta se disponíveis
+    if (_aplDailySpend?.length > 0) {
+      const lbl = _aplDailySpend.map(r => { const [,m,dd] = r.date.split('-'); return `${dd}/${m}`; });
+      makeChart('ca-spend', 'line', lbl, [{ data: _aplDailySpend.map(r => r.spend), borderColor: '#FC8338', label: 'Spend R$', tension: 0.3, pointRadius: 0, borderWidth: 2, fill: true, backgroundColor: 'rgba(252,131,56,0.08)' }]);
+    } else {
+      makeChart('ca-spend', 'line', l, [{ data: seed(620*(d/30), 180*(d/30), d), borderColor: '#FC8338', label: 'Spend R$', tension: 0.3, pointRadius: 0, borderWidth: 2, fill: true, backgroundColor: 'rgba(252,131,56,0.08)' }]);
+    }
+
+    // ca-leads: dados reais do Pipedrive se disponíveis
+    if (_aplDailyLeads?.length > 0) {
+      const lbl = _aplDailyLeads.map(r => { const [,m,dd] = r.date.split('-'); return `${dd}/${m}`; });
+      makeChart('ca-leads', 'line', lbl, [{ data: _aplDailyLeads.map(r => r.leads), borderColor: '#4ade80', label: 'Leads', tension: 0.3, pointRadius: 0, borderWidth: 2 }, { data: _aplDailyLeads.map(r => r.mqls), borderColor: '#60a5fa', label: 'MQLs', tension: 0.3, pointRadius: 0, borderWidth: 2 }]);
+    } else {
+      makeChart('ca-leads', 'line', l, [{ data: seed(11*(d/30), 4*(d/30), d), borderColor: '#4ade80', label: 'Leads', tension: 0.3, pointRadius: 0, borderWidth: 2 }, { data: seed(3*(d/30), 1*(d/30), d), borderColor: '#60a5fa', label: 'MQLs', tension: 0.3, pointRadius: 0, borderWidth: 2 }]);
+    }
     makeChart('cw-spend', 'line', l, [{ data: seed(310*(d/30), 90*(d/30), d), borderColor: '#FC8338', label: 'Spend R$', tension: 0.3, pointRadius: 0, borderWidth: 2, fill: true, backgroundColor: 'rgba(252,131,56,0.08)' }]);
     makeChart('cw-leads', 'line', l, [{ data: seed(42*(d/30), 14*(d/30), d), borderColor: '#4ade80', label: 'Leads', tension: 0.3, pointRadius: 0, borderWidth: 2 }]);
     makeChart('cs-seg', 'line', l, [{ data: seed(95*(d/30), 35*(d/30), d), borderColor: '#FF4A4A', label: 'Seguidores', tension: 0.3, pointRadius: 0, borderWidth: 2, fill: true, backgroundColor: 'rgba(255,74,74,0.08)' }]);
