@@ -177,7 +177,19 @@ function calcFunnelMetrics(allDeals, funnelDealIds, stageIds, budgetKey, mqlIds,
   const receita = wonDeals.reduce((sum, d) => sum + (parseFloat(d.value) || 0), 0);
   const wonList = wonDeals.map(d => ({ id: d.id, title: d.title, value: parseFloat(d.value) || 0, won_time: d.won_time }));
 
-  return { leads, mqls, calls_agendadas, calls_realizadas, vendas, receita, wonList };
+  // ── Leads/MQLs agrupados por dia (add_time) para o gráfico de linha ──
+  const dailyMap = {};
+  for (const d of leadsInPeriod) {
+    const dateStr = d.add_time.substring(0, 10);
+    if (!dailyMap[dateStr]) dailyMap[dateStr] = { leads: 0, mqls: 0 };
+    dailyMap[dateStr].leads++;
+    if (mqlIds.includes(String(d[budgetKey] ?? ''))) dailyMap[dateStr].mqls++;
+  }
+  const daily = Object.entries(dailyMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, v]) => ({ date, leads: v.leads, mqls: v.mqls }));
+
+  return { leads, mqls, calls_agendadas, calls_realizadas, vendas, receita, wonList, daily };
 }
 
 // ─── Handler principal ────────────────────────────────────────────────────────

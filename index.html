@@ -856,6 +856,11 @@
 
   // Campanhas reais do Meta (preenchido por applyMetaData, usado por renderAllPerf)
   let _realMetaCamps = null;
+  // Dados para gráficos da aba Aplicação (preenchidos por applyMetaData / applyPipedriveData)
+  let _aplDailySpend      = null;
+  let _aplDailyLeads      = null;
+  let _aplAgeBreakdown    = null;
+  let _aplGenderBreakdown = null;
 
   // Atualiza cards com dados reais do Meta Ads
   function applyMetaData(meta, crmData) {
@@ -869,6 +874,11 @@
       webinario:      { campaigns: meta.webinario.campaigns || [], adsets: meta.webinario.adsets || [], ads: meta.webinario.ads || [] },
       social_selling: { campaigns: meta.social_selling.campaigns || [], adsets: meta.social_selling.adsets || [], ads: meta.social_selling.ads || [] },
     };
+
+    // Armazena dados de gráfico da Aplicação (podem ser null se API não retornar)
+    if (meta.aplicacao.daily?.length > 0)            _aplDailySpend      = meta.aplicacao.daily;
+    if (meta.aplicacao.age_breakdown?.length > 0)    _aplAgeBreakdown    = meta.aplicacao.age_breakdown;
+    if (meta.aplicacao.gender_breakdown?.length > 0) _aplGenderBreakdown = meta.aplicacao.gender_breakdown;
 
     // Renderiza tabelas fixas de campanhas
     renderCampFixedApl(meta.aplicacao.campaigns || []);
@@ -1083,6 +1093,9 @@
       { label: 'Calls realizadas', val: apl.calls_realizadas + web.calls_realizadas + soc.calls_realizadas },
       { label: 'Vendas', val: apl.vendas + web.vendas + soc.vendas }
     ]);
+
+    // Armazena dados diários de leads/MQLs da Aplicação para o gráfico
+    if (data.aplicacao.daily?.length > 0) _aplDailyLeads = data.aplicacao.daily;
   }
 
   function renderWonDeals(tbodyId, sectionId, wonList) {
@@ -1176,6 +1189,10 @@
 
     const period = document.getElementById('globalPeriod').value;
     const { since, until } = getPeriodDates(period);
+
+    // Reseta dados de gráfico para não mostrar período anterior ao trocar filtro
+    _aplDailySpend = null; _aplDailyLeads = null;
+    _aplAgeBreakdown = null; _aplGenderBreakdown = null;
 
     try {
       // Busca Pipedrive, Sheets e Meta em paralelo
@@ -1305,8 +1322,48 @@
 
   function renderLineCharts(days) {
     const d = days || 30, l = getDays(d);
-    makeChart('ca-spend', 'line', l, [{ data: seed(620*(d/30), 180*(d/30), d), borderColor: '#FC8338', label: 'Spend R$', tension: 0.3, pointRadius: 0, borderWidth: 2, fill: true, backgroundColor: 'rgba(252,131,56,0.08)' }]);
-    makeChart('ca-leads', 'line', l, [{ data: seed(11*(d/30), 4*(d/30), d), borderColor: '#4ade80', label: 'Leads', tension: 0.3, pointRadius: 0, borderWidth: 2 }, { data: seed(3*(d/30), 1*(d/30), d), borderColor: '#60a5fa', label: 'MQLs', tension: 0.3, pointRadius: 0, borderWidth: 2 }]);
+
+    // ca-spend: spend diário real do Meta (fallback: mock)
+    if (_aplDailySpend?.length > 0) {
+      const lbl = _aplDailySpend.map(r => { const [,m,dd] = r.date.split('-'); return `${dd}/${m}`; });
+      makeChart('ca-spend', 'line', lbl, [{ data: _aplDailySpend.map(r => r.spend), borderColor: '#FC8338', label: 'Spend R$', tension: 0.3, pointRadius: 0, borderWidth: 2, fill: true, backgroundColor: 'rgba(252,131,56,0.08)' }]);
+    } else {
+      makeChart('ca-spend', 'line', l, [{ data: seed(620*(d/30), 180*(d/30), d), borderColor: '#FC8338', label: 'Spend R$', tension: 0.3, pointRadius: 0, borderWidth: 2, fill: true, backgroundColor: 'rgba(252,131,56,0.08)' }]);
+    }
+
+    // ca-leads: leads/MQLs diários reais do CRM (fallback: mock)
+    if (_aplDailyLeads?.length > 0) {
+      const lbl = _aplDailyLeads.map(r => { const [,m,dd] = r.date.split('-'); return `${dd}/${m}`; });
+      makeChart('ca-leads', 'line', lbl, [{ data: _aplDailyLeads.map(r => r.leads), borderColor: '#4ade80', label: 'Leads', tension: 0.3, pointRadius: 0, borderWidth: 2 }, { data: _aplDailyLeads.map(r => r.mqls), borderColor: '#60a5fa', label: 'MQLs', tension: 0.3, pointRadius: 0, borderWidth: 2 }]);
+    } else {
+      makeChart('ca-leads', 'line', l, [{ data: seed(11*(d/30), 4*(d/30), d), borderColor: '#4ade80', label: 'Leads', tension: 0.3, pointRadius: 0, borderWidth: 2 }, { data: seed(3*(d/30), 1*(d/30), d), borderColor: '#60a5fa', label: 'MQLs', tension: 0.3, pointRadius: 0, borderWidth: 2 }]);
+    }
+
+    // ca-age: CPL por faixa etária real do Meta (fallback: mock)
+    if (_aplAgeBreakdown?.length > 0) {
+      const ageOrder = ['18-24','25-34','35-44','45-54','55+'];
+      const ageMap = {};
+      for (const r of _aplAgeBreakdown) {
+        const key = (r.age === '55-64' || r.age === '65+') ? '55+' : r.age;
+        if (!ageMap[key]) ageMap[key] = { spend: 0, leads: 0 };
+        ageMap[key].spend += r.spend;
+        ageMap[key].leads += r.leads;
+      }
+      const ageLabels = ageOrder.filter(k => ageMap[k]);
+      const ageCpls   = ageLabels.map(k => ageMap[k].leads > 0 ? Math.round(ageMap[k].spend / ageMap[k].leads * 100) / 100 : 0);
+      makeChart('ca-age', 'bar', ageLabels, [{ data: ageCpls, backgroundColor: '#FC8338', label: 'CPL R$', borderRadius: 3 }]);
+    }
+
+    // ca-gender: Spend e CPL por gênero real do Meta (fallback: mock)
+    if (_aplGenderBreakdown?.length > 0) {
+      const gMap = {};
+      for (const r of _aplGenderBreakdown) gMap[r.gender] = r;
+      const labels = [], spends = [], cpls = [], bgSpend = [], bgCpl = [];
+      if (gMap.male)   { labels.push('Masculino'); spends.push(gMap.male.spend);   cpls.push(gMap.male.cpl);   bgSpend.push('#FC8338'); bgCpl.push('rgba(252,131,56,0.5)'); }
+      if (gMap.female) { labels.push('Feminino');  spends.push(gMap.female.spend); cpls.push(gMap.female.cpl); bgSpend.push('#FF4A4A'); bgCpl.push('rgba(255,74,74,0.5)'); }
+      if (labels.length > 0) makeChart('ca-gender', 'bar', labels, [{ data: spends, backgroundColor: bgSpend, label: 'Spend R$', borderRadius: 3 }, { data: cpls, backgroundColor: bgCpl, label: 'CPL R$', borderRadius: 3 }]);
+    }
+
     makeChart('cw-spend', 'line', l, [{ data: seed(310*(d/30), 90*(d/30), d), borderColor: '#FC8338', label: 'Spend R$', tension: 0.3, pointRadius: 0, borderWidth: 2, fill: true, backgroundColor: 'rgba(252,131,56,0.08)' }]);
     makeChart('cw-leads', 'line', l, [{ data: seed(42*(d/30), 14*(d/30), d), borderColor: '#4ade80', label: 'Leads', tension: 0.3, pointRadius: 0, borderWidth: 2 }]);
     makeChart('cs-seg', 'line', l, [{ data: seed(95*(d/30), 35*(d/30), d), borderColor: '#FF4A4A', label: 'Seguidores', tension: 0.3, pointRadius: 0, borderWidth: 2, fill: true, backgroundColor: 'rgba(255,74,74,0.08)' }]);

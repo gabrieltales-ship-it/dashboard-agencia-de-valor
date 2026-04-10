@@ -159,6 +159,75 @@ async function getInsightsByLevel(adAccountId, campaignIds, level, since, until,
   });
 }
 
+// ─── Busca spend diário (time_increment=1) para uma lista de campaign IDs ────
+
+async function getDailySpend(adAccountId, campaignIds, since, until, token) {
+  if (campaignIds.length === 0) return [];
+
+  const timeRange = JSON.stringify({ since, until });
+  const filtering = JSON.stringify([
+    { field: 'campaign.id', operator: 'IN', value: campaignIds }
+  ]);
+
+  const url = `${BASE}/${adAccountId}/insights`
+    + `?level=campaign`
+    + `&fields=spend,date_start`
+    + `&time_range=${encodeURIComponent(timeRange)}`
+    + `&time_increment=1`
+    + `&filtering=${encodeURIComponent(filtering)}`
+    + `&limit=500`
+    + `&access_token=${token}`;
+
+  const rows = await fetchAllPages(url);
+
+  const byDate = {};
+  for (const row of rows) {
+    const date = row.date_start;
+    byDate[date] = (byDate[date] || 0) + parseFloat(row.spend || 0);
+  }
+
+  return Object.entries(byDate)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, spend]) => ({ date, spend: Math.round(spend * 100) / 100 }));
+}
+
+// ─── Busca breakdown por dimensão (age ou gender) ────────────────────────────
+
+async function getBreakdown(adAccountId, campaignIds, breakdown, since, until, token, mqlActionType) {
+  if (campaignIds.length === 0) return [];
+
+  const timeRange = JSON.stringify({ since, until });
+  const filtering = JSON.stringify([
+    { field: 'campaign.id', operator: 'IN', value: campaignIds }
+  ]);
+
+  const url = `${BASE}/${adAccountId}/insights`
+    + `?level=campaign`
+    + `&fields=spend,actions,${breakdown}`
+    + `&breakdowns=${breakdown}`
+    + `&time_range=${encodeURIComponent(timeRange)}`
+    + `&filtering=${encodeURIComponent(filtering)}`
+    + `&limit=500`
+    + `&access_token=${token}`;
+
+  const rows = await fetchAllPages(url);
+
+  const byDim = {};
+  for (const row of rows) {
+    const dim = row[breakdown] || 'unknown';
+    if (!byDim[dim]) byDim[dim] = { spend: 0, leads: 0 };
+    byDim[dim].spend += parseFloat(row.spend || 0);
+    byDim[dim].leads += sumActions(row.actions, 'lead');
+  }
+
+  return Object.entries(byDim).map(([dim, v]) => ({
+    [breakdown]: dim,
+    spend: Math.round(v.spend * 100) / 100,
+    leads: v.leads,
+    cpl:   v.leads > 0 ? Math.round(v.spend / v.leads * 100) / 100 : 0,
+  }));
+}
+
 // ─── Handler principal ────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
@@ -222,16 +291,29 @@ export default async function handler(req, res) {
       getInsightsByLevel(adAccountId, funnelIds.social_selling, 'ad',    since, until, token, mqlActionType),
     ]);
 
+    // 5. Dados de gráfico (diário + breakdowns) — em allSettled para não quebrar a resposta principal
+    const [dailyRes, ageRes, genderRes] = await Promise.allSettled([
+      getDailySpend(adAccountId, funnelIds.aplicacao, since, until, token),
+      getBreakdown(adAccountId, funnelIds.aplicacao, 'age',    since, until, token, mqlActionType),
+      getBreakdown(adAccountId, funnelIds.aplicacao, 'gender', since, until, token, mqlActionType),
+    ]);
+    const aplDaily           = dailyRes.status  === 'fulfilled' ? dailyRes.value  : [];
+    const aplAgeBreakdown    = ageRes.status     === 'fulfilled' ? ageRes.value    : [];
+    const aplGenderBreakdown = genderRes.status  === 'fulfilled' ? genderRes.value : [];
+
     return res.status(200).json({
       source: 'meta_ads',
       period: { since, until },
       aplicacao: {
-        spend:     aplData.spend,
-        leads:     aplData.leads,
-        mqls:      aplData.mqls,
-        campaigns: aplData.campaigns,
-        adsets:    aplAdsets,
-        ads:       aplAds,
+        spend:            aplData.spend,
+        leads:            aplData.leads,
+        mqls:             aplData.mqls,
+        campaigns:        aplData.campaigns,
+        adsets:           aplAdsets,
+        ads:              aplAds,
+        daily:            aplDaily,
+        age_breakdown:    aplAgeBreakdown,
+        gender_breakdown: aplGenderBreakdown,
       },
       webinario: {
         spend:     webData.spend,
