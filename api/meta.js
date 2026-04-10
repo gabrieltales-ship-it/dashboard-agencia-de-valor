@@ -159,81 +159,6 @@ async function getInsightsByLevel(adAccountId, campaignIds, level, since, until,
   });
 }
 
-// ─── Busca spend diário para uma lista de campaign IDs ───────────────────────
-
-async function getDailySpend(adAccountId, campaignIds, since, until, token) {
-  if (campaignIds.length === 0) return [];
-
-  const timeRange = JSON.stringify({ since, until });
-  const filtering = JSON.stringify([
-    { field: 'campaign.id', operator: 'IN', value: campaignIds }
-  ]);
-
-  const url = `${BASE}/${adAccountId}/insights`
-    + `?level=campaign`
-    + `&fields=spend`
-    + `&time_range=${encodeURIComponent(timeRange)}`
-    + `&time_increment=1`
-    + `&filtering=${encodeURIComponent(filtering)}`
-    + `&limit=500`
-    + `&access_token=${token}`;
-
-  const rows = await fetchAllPages(url);
-
-  // Agrupa por data (pode haver múltiplas campanhas por dia)
-  const byDate = {};
-  for (const row of rows) {
-    const date = row.date_start;
-    byDate[date] = (byDate[date] || 0) + parseFloat(row.spend || 0);
-  }
-
-  return Object.entries(byDate)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, spend]) => ({ date, spend: Math.round(spend * 100) / 100 }));
-}
-
-// ─── Busca breakdown por dimensão (age ou gender) para uma lista de campaign IDs ─
-
-async function getBreakdown(adAccountId, campaignIds, breakdown, since, until, token, mqlActionType) {
-  if (campaignIds.length === 0) return [];
-
-  const timeRange = JSON.stringify({ since, until });
-  const filtering = JSON.stringify([
-    { field: 'campaign.id', operator: 'IN', value: campaignIds }
-  ]);
-  const fields = `spend,actions,${breakdown}`;
-
-  const url = `${BASE}/${adAccountId}/insights`
-    + `?level=campaign`
-    + `&fields=${encodeURIComponent(fields)}`
-    + `&breakdowns=${breakdown}`
-    + `&time_range=${encodeURIComponent(timeRange)}`
-    + `&filtering=${encodeURIComponent(filtering)}`
-    + `&limit=500`
-    + `&access_token=${token}`;
-
-  const rows = await fetchAllPages(url);
-
-  const mqlTypes = ['offsite_conversion.custom.MQL', 'MQL'];
-  if (mqlActionType) mqlTypes.unshift(mqlActionType);
-
-  // Agrupa por dimensão (pode haver várias campanhas por segmento)
-  const byDim = {};
-  for (const row of rows) {
-    const dim = row[breakdown] || 'unknown';
-    if (!byDim[dim]) byDim[dim] = { spend: 0, leads: 0 };
-    byDim[dim].spend += parseFloat(row.spend || 0);
-    byDim[dim].leads += sumActions(row.actions, 'lead');
-  }
-
-  return Object.entries(byDim).map(([dim, v]) => ({
-    [breakdown]: dim,
-    spend: Math.round(v.spend * 100) / 100,
-    leads: v.leads,
-    cpl:   v.leads > 0 ? Math.round(v.spend / v.leads * 100) / 100 : 0,
-  }));
-}
-
 // ─── Handler principal ────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
@@ -280,13 +205,11 @@ export default async function handler(req, res) {
     // 3. Busca o action_type do MQL
     const mqlActionType = await getMqlActionType(adAccountId, token);
 
-    // 4. Insights de campanha, adset, ad, breakdowns e diário — todos em paralelo
+    // 4. Insights de campanha, adset e ad — todos em paralelo
     const [
       aplData, webData, socData,
       aplAdsets, webAdsets, socAdsets,
       aplAds, webAds, socAds,
-      aplDaily,
-      aplAgeBreakdown, aplGenderBreakdown,
     ] = await Promise.all([
       getFunnelInsights(adAccountId, funnelIds.aplicacao,      since, until, token, mqlActionType, budgetMap),
       getFunnelInsights(adAccountId, funnelIds.webinario,      since, until, token, mqlActionType, budgetMap),
@@ -297,24 +220,18 @@ export default async function handler(req, res) {
       getInsightsByLevel(adAccountId, funnelIds.aplicacao,      'ad',    since, until, token, mqlActionType),
       getInsightsByLevel(adAccountId, funnelIds.webinario,      'ad',    since, until, token, mqlActionType),
       getInsightsByLevel(adAccountId, funnelIds.social_selling, 'ad',    since, until, token, mqlActionType),
-      getDailySpend(adAccountId, funnelIds.aplicacao, since, until, token),
-      getBreakdown(adAccountId, funnelIds.aplicacao, 'age',    since, until, token, mqlActionType),
-      getBreakdown(adAccountId, funnelIds.aplicacao, 'gender', since, until, token, mqlActionType),
     ]);
 
     return res.status(200).json({
       source: 'meta_ads',
       period: { since, until },
       aplicacao: {
-        spend:           aplData.spend,
-        leads:           aplData.leads,
-        mqls:            aplData.mqls,
-        campaigns:       aplData.campaigns,
-        adsets:          aplAdsets,
-        ads:             aplAds,
-        daily:           aplDaily,
-        age_breakdown:   aplAgeBreakdown,
-        gender_breakdown: aplGenderBreakdown,
+        spend:     aplData.spend,
+        leads:     aplData.leads,
+        mqls:      aplData.mqls,
+        campaigns: aplData.campaigns,
+        adsets:    aplAdsets,
+        ads:       aplAds,
       },
       webinario: {
         spend:     webData.spend,
