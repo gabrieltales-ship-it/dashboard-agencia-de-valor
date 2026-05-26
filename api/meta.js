@@ -228,20 +228,199 @@ async function getBreakdown(adAccountId, campaignIds, breakdown, since, until, t
   }));
 }
 
+// ─── Busca todos os dados de UMA conta de anúncios ────────────────────────────
+
+async function getAccountData(adAccountId, since, until, token) {
+  // 1. Campanhas da conta (inclui daily_budget)
+  const campaignsUrl = `${BASE}/${adAccountId}/campaigns`
+    + `?fields=id,name,effective_status,daily_budget`
+    + `&limit=500`
+    + `&access_token=${token}`;
+
+  const allCampaigns = await fetchAllPages(campaignsUrl);
+
+  // Mapa campaignId → daily_budget em BRL (Meta retorna em centavos)
+  const budgetMap = Object.fromEntries(
+    allCampaigns.map(c => [c.id, parseInt(c.daily_budget || 0) / 100])
+  );
+
+  // 2. Separa campanhas por funil com base no nome
+  const funnelIds = { aplicacao: [], webinario: [], social_selling: [] };
+  for (const c of allCampaigns) {
+    if      (c.name.includes('Sessão'))   funnelIds.aplicacao.push(c.id);
+    else if (c.name.includes('Web'))      funnelIds.webinario.push(c.id);
+    else if (c.name.includes('Tráfego')) funnelIds.social_selling.push(c.id);
+  }
+
+  // 3. action_type do MQL (custom conversion específica desta conta)
+  const mqlActionType = await getMqlActionType(adAccountId, token);
+
+  // 4. Insights de campanha, adset e ad — todos em paralelo
+  const [
+    aplData, webData, socData,
+    aplAdsets, webAdsets, socAdsets,
+    aplAds, webAds, socAds,
+  ] = await Promise.all([
+    getFunnelInsights(adAccountId, funnelIds.aplicacao,      since, until, token, mqlActionType, budgetMap),
+    getFunnelInsights(adAccountId, funnelIds.webinario,      since, until, token, mqlActionType, budgetMap),
+    getFunnelInsights(adAccountId, funnelIds.social_selling, since, until, token, mqlActionType, budgetMap),
+    getInsightsByLevel(adAccountId, funnelIds.aplicacao,      'adset', since, until, token, mqlActionType),
+    getInsightsByLevel(adAccountId, funnelIds.webinario,      'adset', since, until, token, mqlActionType),
+    getInsightsByLevel(adAccountId, funnelIds.social_selling, 'adset', since, until, token, mqlActionType),
+    getInsightsByLevel(adAccountId, funnelIds.aplicacao,      'ad',    since, until, token, mqlActionType),
+    getInsightsByLevel(adAccountId, funnelIds.webinario,      'ad',    since, until, token, mqlActionType),
+    getInsightsByLevel(adAccountId, funnelIds.social_selling, 'ad',    since, until, token, mqlActionType),
+  ]);
+
+  // 5. Dados de gráfico (diário + breakdowns) — allSettled para não quebrar a resposta
+  const [dailyRes, ageRes, genderRes] = await Promise.allSettled([
+    getDailySpend(adAccountId, funnelIds.aplicacao, since, until, token),
+    getBreakdown(adAccountId, funnelIds.aplicacao, 'age',    since, until, token, mqlActionType),
+    getBreakdown(adAccountId, funnelIds.aplicacao, 'gender', since, until, token, mqlActionType),
+  ]);
+
+  return {
+    aplicacao: {
+      spend:            aplData.spend,
+      leads:            aplData.leads,
+      mqls:             aplData.mqls,
+      campaigns:        aplData.campaigns,
+      adsets:           aplAdsets,
+      ads:              aplAds,
+      daily:            dailyRes.status  === 'fulfilled' ? dailyRes.value  : [],
+      age_breakdown:    ageRes.status    === 'fulfilled' ? ageRes.value    : [],
+      gender_breakdown: genderRes.status === 'fulfilled' ? genderRes.value : [],
+    },
+    webinario: {
+      spend:     webData.spend,
+      leads:     webData.leads,
+      campaigns: webData.campaigns,
+      adsets:    webAdsets,
+      ads:       webAds,
+    },
+    social_selling: {
+      spend:      socData.spend,
+      seguidores: socData.seguidores,
+      campaigns:  socData.campaigns,
+      adsets:     socAdsets,
+      ads:        socAds,
+    },
+    _meta: {
+      adAccountId,
+      mqlActionType,
+      totalCampaigns: allCampaigns.length,
+      funnelCounts: {
+        aplicacao:      funnelIds.aplicacao.length,
+        webinario:      funnelIds.webinario.length,
+        social_selling: funnelIds.social_selling.length,
+      },
+      allCampaigns: allCampaigns.map(c => ({
+        id:           c.id,
+        name:         c.name,
+        status:       c.effective_status,
+        daily_budget: parseInt(c.daily_budget || 0) / 100,
+      })),
+    },
+  };
+}
+
+// ─── Merge de múltiplas contas ────────────────────────────────────────────────
+
+const round2 = n => Math.round(n * 100) / 100;
+
+// Série diária: combina por data somando todos os campos numéricos (ex: spend)
+function mergeDaily(lists) {
+  const byDate = {};
+  for (const list of lists) {
+    for (const r of list) {
+      if (!byDate[r.date]) byDate[r.date] = { date: r.date, spend: 0 };
+      byDate[r.date].spend += r.spend || 0;
+    }
+  }
+  return Object.values(byDate)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map(d => ({ date: d.date, spend: round2(d.spend) }));
+}
+
+// Breakdown (age/gender): combina por dimensão somando spend+leads e recalcula CPL
+function mergeBreakdown(lists, dimKey) {
+  const byDim = {};
+  for (const list of lists) {
+    for (const r of list) {
+      const dim = r[dimKey];
+      if (!byDim[dim]) byDim[dim] = { spend: 0, leads: 0 };
+      byDim[dim].spend += r.spend || 0;
+      byDim[dim].leads += r.leads || 0;
+    }
+  }
+  return Object.entries(byDim).map(([dim, v]) => ({
+    [dimKey]: dim,
+    spend: round2(v.spend),
+    leads: v.leads,
+    cpl:   v.leads > 0 ? round2(v.spend / v.leads) : 0,
+  }));
+}
+
+// Funde os resultados de N contas num único objeto com a mesma forma de saída
+function mergeAccounts(accounts) {
+  const sum = key => round2(accounts.reduce((s, a) => s + (a.aplicacao[key] || 0), 0));
+  const sumF = (funnel, key) => round2(accounts.reduce((s, a) => s + (a[funnel][key] || 0), 0));
+  const concat = (funnel, key) => accounts.flatMap(a => a[funnel][key] || []);
+
+  return {
+    aplicacao: {
+      spend:            sumF('aplicacao', 'spend'),
+      leads:            accounts.reduce((s, a) => s + a.aplicacao.leads, 0),
+      mqls:             accounts.reduce((s, a) => s + a.aplicacao.mqls, 0),
+      campaigns:        concat('aplicacao', 'campaigns'),
+      adsets:           concat('aplicacao', 'adsets'),
+      ads:              concat('aplicacao', 'ads'),
+      daily:            mergeDaily(accounts.map(a => a.aplicacao.daily)),
+      age_breakdown:    mergeBreakdown(accounts.map(a => a.aplicacao.age_breakdown), 'age'),
+      gender_breakdown: mergeBreakdown(accounts.map(a => a.aplicacao.gender_breakdown), 'gender'),
+    },
+    webinario: {
+      spend:     sumF('webinario', 'spend'),
+      leads:     accounts.reduce((s, a) => s + a.webinario.leads, 0),
+      campaigns: concat('webinario', 'campaigns'),
+      adsets:    concat('webinario', 'adsets'),
+      ads:       concat('webinario', 'ads'),
+    },
+    social_selling: {
+      spend:      sumF('social_selling', 'spend'),
+      seguidores: accounts.reduce((s, a) => s + a.social_selling.seguidores, 0),
+      campaigns:  concat('social_selling', 'campaigns'),
+      adsets:     concat('social_selling', 'adsets'),
+      ads:        concat('social_selling', 'ads'),
+    },
+  };
+}
+
+// ─── Lê os IDs de conta das env vars (suporta múltiplas contas) ───────────────
+// META_AD_ACCOUNT_ID (principal) + META_AD_ACCOUNT_ID_2, _3, ... (opcionais)
+
+function getAccountIds() {
+  const ids = [
+    process.env.META_AD_ACCOUNT_ID,
+    process.env.META_AD_ACCOUNT_ID_2,
+    process.env.META_AD_ACCOUNT_ID_3,
+  ].filter(Boolean);
+
+  // Garante o prefixo act_ independente de como foi salvo no Vercel
+  return ids.map(id => (id.startsWith('act_') ? id : `act_${id}`));
+}
+
 // ─── Handler principal ────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
 
-  const token  = process.env.META_TOKEN;
-  const rawId  = process.env.META_AD_ACCOUNT_ID;
+  const token      = process.env.META_TOKEN;
+  const accountIds = getAccountIds();
 
-  if (!token || !rawId) {
+  if (!token || accountIds.length === 0) {
     return res.status(500).json({ error: 'META_TOKEN ou META_AD_ACCOUNT_ID não configurados' });
   }
-
-  // Garante o prefixo act_ independente de como foi salvo no Vercel
-  const adAccountId = rawId.startsWith('act_') ? rawId : `act_${rawId}`;
 
   const { since, until } = req.query;
   if (!since || !until) {
@@ -249,100 +428,19 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Busca todas as campanhas da conta (inclui daily_budget)
-    const campaignsUrl = `${BASE}/${adAccountId}/campaigns`
-      + `?fields=id,name,effective_status,daily_budget`
-      + `&limit=500`
-      + `&access_token=${token}`;
-
-    const allCampaigns = await fetchAllPages(campaignsUrl);
-
-    // Mapa campaignId → daily_budget em BRL (Meta retorna em centavos)
-    const budgetMap = Object.fromEntries(
-      allCampaigns.map(c => [c.id, parseInt(c.daily_budget || 0) / 100])
+    // Busca cada conta em paralelo e funde os resultados
+    const accounts = await Promise.all(
+      accountIds.map(id => getAccountData(id, since, until, token))
     );
 
-    // 2. Separa campanhas por funil com base no nome
-    const funnelIds = { aplicacao: [], webinario: [], social_selling: [] };
-
-    for (const c of allCampaigns) {
-      if      (c.name.includes('Sessão'))   funnelIds.aplicacao.push(c.id);
-      else if (c.name.includes('Web'))      funnelIds.webinario.push(c.id);
-      else if (c.name.includes('Tráfego')) funnelIds.social_selling.push(c.id);
-    }
-
-    // 3. Busca o action_type do MQL
-    const mqlActionType = await getMqlActionType(adAccountId, token);
-
-    // 4. Insights de campanha, adset e ad — todos em paralelo
-    const [
-      aplData, webData, socData,
-      aplAdsets, webAdsets, socAdsets,
-      aplAds, webAds, socAds,
-    ] = await Promise.all([
-      getFunnelInsights(adAccountId, funnelIds.aplicacao,      since, until, token, mqlActionType, budgetMap),
-      getFunnelInsights(adAccountId, funnelIds.webinario,      since, until, token, mqlActionType, budgetMap),
-      getFunnelInsights(adAccountId, funnelIds.social_selling, since, until, token, mqlActionType, budgetMap),
-      getInsightsByLevel(adAccountId, funnelIds.aplicacao,      'adset', since, until, token, mqlActionType),
-      getInsightsByLevel(adAccountId, funnelIds.webinario,      'adset', since, until, token, mqlActionType),
-      getInsightsByLevel(adAccountId, funnelIds.social_selling, 'adset', since, until, token, mqlActionType),
-      getInsightsByLevel(adAccountId, funnelIds.aplicacao,      'ad',    since, until, token, mqlActionType),
-      getInsightsByLevel(adAccountId, funnelIds.webinario,      'ad',    since, until, token, mqlActionType),
-      getInsightsByLevel(adAccountId, funnelIds.social_selling, 'ad',    since, until, token, mqlActionType),
-    ]);
-
-    // 5. Dados de gráfico (diário + breakdowns) — em allSettled para não quebrar a resposta principal
-    const [dailyRes, ageRes, genderRes] = await Promise.allSettled([
-      getDailySpend(adAccountId, funnelIds.aplicacao, since, until, token),
-      getBreakdown(adAccountId, funnelIds.aplicacao, 'age',    since, until, token, mqlActionType),
-      getBreakdown(adAccountId, funnelIds.aplicacao, 'gender', since, until, token, mqlActionType),
-    ]);
-    const aplDaily           = dailyRes.status  === 'fulfilled' ? dailyRes.value  : [];
-    const aplAgeBreakdown    = ageRes.status     === 'fulfilled' ? ageRes.value    : [];
-    const aplGenderBreakdown = genderRes.status  === 'fulfilled' ? genderRes.value : [];
+    const merged = mergeAccounts(accounts);
 
     return res.status(200).json({
       source: 'meta_ads',
       period: { since, until },
-      aplicacao: {
-        spend:            aplData.spend,
-        leads:            aplData.leads,
-        mqls:             aplData.mqls,
-        campaigns:        aplData.campaigns,
-        adsets:           aplAdsets,
-        ads:              aplAds,
-        daily:            aplDaily,
-        age_breakdown:    aplAgeBreakdown,
-        gender_breakdown: aplGenderBreakdown,
-      },
-      webinario: {
-        spend:     webData.spend,
-        leads:     webData.leads,
-        campaigns: webData.campaigns,
-        adsets:    webAdsets,
-        ads:       webAds,
-      },
-      social_selling: {
-        spend:      socData.spend,
-        seguidores: socData.seguidores,
-        campaigns:  socData.campaigns,
-        adsets:     socAdsets,
-        ads:        socAds,
-      },
+      ...merged,
       _debug: {
-        mqlActionType,
-        totalCampaigns: allCampaigns.length,
-        funnelCounts: {
-          aplicacao:      funnelIds.aplicacao.length,
-          webinario:      funnelIds.webinario.length,
-          social_selling: funnelIds.social_selling.length,
-        },
-        allCampaigns: allCampaigns.map(c => ({
-          id:           c.id,
-          name:         c.name,
-          status:       c.effective_status,
-          daily_budget: parseInt(c.daily_budget || 0) / 100,
-        })),
+        accounts: accounts.map(a => a._meta),
       },
     });
 
