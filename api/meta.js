@@ -406,8 +406,12 @@ function getAccountIds() {
     process.env.META_AD_ACCOUNT_ID_3,
   ].filter(Boolean);
 
-  // Garante o prefixo act_ independente de como foi salvo no Vercel
-  return ids.map(id => (id.startsWith('act_') ? id : `act_${id}`));
+  // Normaliza: remove espaços e qualquer prefixo act_/act= que tenha sido colado
+  // por engano, e devolve sempre no formato act_<numeros>.
+  return ids.map(raw => {
+    const clean = String(raw).trim().replace(/^act[_=\s]*/i, '');
+    return `act_${clean}`;
+  });
 }
 
 // ─── Handler principal ────────────────────────────────────────────────────────
@@ -428,10 +432,20 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Busca cada conta em paralelo e funde os resultados
-    const accounts = await Promise.all(
+    // Busca cada conta em paralelo. allSettled garante que uma conta com
+    // problema (ID errado, sem permissão) não derrube o painel inteiro.
+    const settled = await Promise.allSettled(
       accountIds.map(id => getAccountData(id, since, until, token))
     );
+
+    const accounts = settled.filter(s => s.status === 'fulfilled').map(s => s.value);
+    const failures = settled
+      .map((s, i) => (s.status === 'rejected' ? { adAccountId: accountIds[i], error: s.reason?.message } : null))
+      .filter(Boolean);
+
+    if (accounts.length === 0) {
+      throw new Error(`Nenhuma conta Meta pôde ser lida. Falhas: ${JSON.stringify(failures)}`);
+    }
 
     const merged = mergeAccounts(accounts);
 
@@ -441,6 +455,7 @@ export default async function handler(req, res) {
       ...merged,
       _debug: {
         accounts: accounts.map(a => a._meta),
+        failures,
       },
     });
 
