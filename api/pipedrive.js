@@ -10,6 +10,22 @@
 
 const BASE = 'https://api.pipedrive.com/v1';
 
+// ─── Autenticação ─────────────────────────────────────────────────────────────
+// O Pipedrive descontinuou o api_token na query string. Agora o token vai no
+// header x-api-token. Ref: https://pipedrive.readme.io/docs/core-api-concepts-authentication
+
+function pdUrl(path, params = {}) {
+  const qs = new URLSearchParams(params).toString();
+  return `${BASE}${path}${qs ? `?${qs}` : ''}`;
+}
+
+async function pdGet(path, token, params = {}) {
+  const res = await fetch(pdUrl(path, params), {
+    headers: { 'x-api-token': token, Accept: 'application/json' }
+  });
+  return res.json();
+}
+
 // ─── Helper: busca todas as páginas de um endpoint ───────────────────────────
 
 async function fetchAll(path, token, extraParams = {}) {
@@ -18,9 +34,7 @@ async function fetchAll(path, token, extraParams = {}) {
   let all = [];
 
   while (true) {
-    const params = new URLSearchParams({ api_token: token, limit, start, ...extraParams });
-    const res  = await fetch(`${BASE}${path}?${params}`);
-    const json = await res.json();
+    const json = await pdGet(path, token, { limit, start, ...extraParams });
 
     if (!json.success) throw new Error(`Pipedrive erro em ${path}: ${JSON.stringify(json.error)}`);
 
@@ -35,18 +49,20 @@ async function fetchAll(path, token, extraParams = {}) {
 // ─── Busca ID do pipeline "Comercial" ────────────────────────────────────────
 
 async function getPipelineId(token) {
-  const res  = await fetch(`${BASE}/pipelines?api_token=${token}`);
-  const json = await res.json();
-  const p = json.data?.find(p => p.name === 'Comercial');
-  if (!p) throw new Error('Pipeline "Comercial" não encontrado');
+  const json = await pdGet('/pipelines', token);
+  const pipelines = json.data || [];
+  const p = pipelines.find(p => p.name?.trim().toLowerCase() === 'comercial');
+  if (!p) {
+    const found = pipelines.map(p => `"${p.name}"`).join(', ') || '(nenhum)';
+    throw new Error(`Pipeline "Comercial" não encontrado. Pipelines visíveis para este token: ${found}`);
+  }
   return p.id;
 }
 
 // ─── Busca IDs e ordem das etapas ────────────────────────────────────────────
 
 async function getStageIds(token, pipelineId) {
-  const res  = await fetch(`${BASE}/stages?pipeline_id=${pipelineId}&api_token=${token}`);
-  const json = await res.json();
+  const json = await pdGet('/stages', token, { pipeline_id: pipelineId });
   const stages = json.data || [];
   const find = name => stages.find(s => s.name === name)?.id;
   return {
@@ -59,21 +75,17 @@ async function getStageIds(token, pipelineId) {
 // ─── Busca campo Budget e IDs das opções MQL ─────────────────────────────────
 
 async function getBudgetField(token) {
-  const res  = await fetch(`${BASE}/dealFields?api_token=${token}&limit=500`);
-  const json = await res.json();
+  const json = await pdGet('/dealFields', token, { limit: 500 });
   const field = json.data?.find(f => f.name === 'Budget');
   if (!field) throw new Error('Campo "Budget" não encontrado no Pipedrive');
 
-  const mqlLabels = [
-    'De R$ 10.001 a R$15.000 por mês',
-    'De R$ 15.001 a R$50.000 por mês',
-    'De R$ 50.001 a R$100.000 por mês',
-    'Mais de R$1000.000 por mês'
-  ];
+  // MQL = faixas de alto valor. Casamos por ID das opções (estável), conforme
+  // CLAUDE.md: 63 (R$10.001–15.000), 64 (R$15.001–50.000),
+  // 65 (R$50.001–100.000), 66 (Mais de R$100.000).
+  const MQL_OPTION_IDS = ['63', '64', '65', '66'];
 
-  const mqlIds = field.options
-    ?.filter(o => mqlLabels.some(l => o.label.trim() === l.trim()))
-    .map(o => String(o.id)) || [];
+  const optionIds = new Set((field.options || []).map(o => String(o.id)));
+  const mqlIds = MQL_OPTION_IDS.filter(id => optionIds.has(id));
 
   return { key: field.key, mqlIds };
 }
@@ -82,8 +94,7 @@ async function getBudgetField(token) {
 // IDs conhecidos como fallback (CLAUDE.md): WEBNARIO=121, LEAD KOMMO=21
 
 async function getLabelIds(token) {
-  const res  = await fetch(`${BASE}/dealFields?api_token=${token}&limit=500`);
-  const json = await res.json();
+  const json = await pdGet('/dealFields', token, { limit: 500 });
 
   const labelField = json.data?.find(f => f.key === 'label');
 
