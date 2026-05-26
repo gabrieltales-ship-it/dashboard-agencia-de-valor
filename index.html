@@ -835,14 +835,14 @@
     const setSub  = (id, t) => { const el = document.getElementById(id); if (!el) return; const s = el.querySelector('.card-sub'); if (s) s.textContent = t; };
 
     // ── Aplicação ──
-    setVal('apl-spend',  apl.spend > 0 ? `R$ ${fmtNum(apl.spend)}` : '—');
+    setVal('apl-spend',  apl.spend > 0 ? `R$ ${fmtMoney(apl.spend)}` : '—');
     setVal('apl-leads',  apl.leads > 0 ? apl.leads : '—');
     setVal('apl-mqls',   apl.mqls  > 0 ? apl.mqls  : '—');
     setVal('apl-cpl',    apl.leads > 0 ? fmtBRL(apl.spend / apl.leads) : '—');
     setVal('apl-cpmql',  apl.mqls  > 0 ? fmtBRL(apl.spend / apl.mqls)  : '—');
 
     // ── Webinário ──
-    setVal('web-spend', web.spend > 0 ? `R$ ${fmtNum(web.spend)}` : '—');
+    setVal('web-spend', web.spend > 0 ? `R$ ${fmtMoney(web.spend)}` : '—');
     const cplEl = document.getElementById('web-cpl');
     if (cplEl) {
       const webLeadsText = document.getElementById('web-leads')?.querySelector('.card-value')?.textContent || '';
@@ -852,7 +852,7 @@
     }
 
     // ── Social Selling (só spend — seguidores e custo/seguidor vêm da planilha) ──
-    setVal('soc-spend', soc.spend > 0 ? `R$ ${fmtNum(soc.spend)}` : '—');
+    setVal('soc-spend', soc.spend > 0 ? `R$ ${fmtMoney(soc.spend)}` : '—');
 
     if (crmData) {
       const ca  = crmData.aplicacao;
@@ -898,7 +898,7 @@
       const totalReceita = ca.receita + wc.receita + sc.receita;
 
       const totalInvEl = document.querySelector('#ger .card .card-value');
-      if (totalInvEl && totalSpend > 0) totalInvEl.textContent = `R$ ${fmtNum(totalSpend)}`;
+      if (totalInvEl && totalSpend > 0) totalInvEl.textContent = `R$ ${fmtMoney(totalSpend)}`;
 
       // CPL geral = investimento total / entradas no CRM
       const totalLeadsCRM = crmData.total_leads_crm || (ca.leads + wc.leads + sc.leads);
@@ -923,17 +923,17 @@
         ? (totalReceita / totalSpend).toFixed(1) + 'x' : '—';
 
       // Tabela CAC/ROAS por funil
-      setText('ger-apl-spend',   apl.spend > 0 ? `R$ ${fmtNum(apl.spend)}` : '—');
+      setText('ger-apl-spend',   apl.spend > 0 ? `R$ ${fmtMoney(apl.spend)}` : '—');
       setText('ger-apl-vendas',  ca.vendas);
       setText('ger-apl-cac',     aplCac);
       setText('ger-apl-receita', `R$ ${fmtNum(ca.receita)}`);
       setText('ger-apl-roas',    aplRoas);
-      setText('ger-web-spend',   web.spend > 0 ? `R$ ${fmtNum(web.spend)}` : '—');
+      setText('ger-web-spend',   web.spend > 0 ? `R$ ${fmtMoney(web.spend)}` : '—');
       setText('ger-web-vendas',  wc.vendas);
       setText('ger-web-cac',     webCac);
       setText('ger-web-receita', `R$ ${fmtNum(wc.receita)}`);
       setText('ger-web-roas',    webRoas);
-      setText('ger-soc-spend',   soc.spend > 0 ? `R$ ${fmtNum(soc.spend)}` : '—');
+      setText('ger-soc-spend',   soc.spend > 0 ? `R$ ${fmtMoney(soc.spend)}` : '—');
       setText('ger-soc-vendas',  sc.vendas);
       setText('ger-soc-cac',     socCac);
       setText('ger-soc-receita', `R$ ${fmtNum(sc.receita)}`);
@@ -1073,6 +1073,12 @@
   function fmtNum(n) {
     if (!n || !isFinite(n)) return '0';
     return n.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+
+  // Valor exato com centavos (usado no "Valor gasto" para não arredondar)
+  function fmtMoney(n) {
+    if (!n || !isFinite(n)) return '0,00';
+    return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   // Atualiza cards e funnels com dados da planilha
