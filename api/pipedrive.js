@@ -145,6 +145,28 @@ function getFunnel(deal, labelIds) {
   return 'aplicacao';
 }
 
+// ─── Identifica o expert pela label do negócio ────────────────────────────────
+// Labels conhecidas (CLAUDE.md / lista real): JOÃO=124, ROBSON=125.
+// Configurável por env var, com fallback para os IDs conhecidos.
+
+const EXPERT_LABELS = {
+  joao:   process.env.PIPEDRIVE_LABEL_JOAO   || '124',
+  robson: process.env.PIPEDRIVE_LABEL_ROBSON || '125',
+};
+
+function getExpert(deal) {
+  const raw = deal.label;
+  const dealLabels = raw == null
+    ? []
+    : (Array.isArray(raw) ? raw : String(raw).split(','))
+        .map(l => l.trim())
+        .filter(Boolean);
+
+  if (dealLabels.includes(String(EXPERT_LABELS.joao)))   return 'joao';
+  if (dealLabels.includes(String(EXPERT_LABELS.robson))) return 'robson';
+  return null;
+}
+
 // ─── Calcula métricas por funil ───────────────────────────────────────────────
 //
 // Leads / MQLs  → negócios criados (add_time) no período
@@ -244,19 +266,45 @@ export default async function handler(req, res) {
       })
     ]);
 
-    // Separa IDs dos negócios por funil (considera todos, não só do período)
+    // Separa IDs dos negócios por funil (geral) e por (funil, expert).
+    // Aplicação e Social Selling viram per-expert; Webinário fica só no geral.
     const funnelIds = {
       aplicacao:      new Set(),
       webinario:      new Set(),
       social_selling: new Set()
     };
+    const expertIds = {
+      joao:   { aplicacao: new Set(), social_selling: new Set() },
+      robson: { aplicacao: new Set(), social_selling: new Set() },
+    };
     for (const deal of allDeals) {
-      funnelIds[getFunnel(deal, labelIds)].add(deal.id);
+      const funnel = getFunnel(deal, labelIds);
+      funnelIds[funnel].add(deal.id);
+
+      const expert = getExpert(deal);
+      if (expert && (funnel === 'aplicacao' || funnel === 'social_selling')) {
+        expertIds[expert][funnel].add(deal.id);
+      }
     }
 
-    const aplicacao      = calcFunnelMetrics(allDeals, funnelIds.aplicacao,      stageData, budgetField.key, budgetField.mqlIds, sinceTs, untilTs);
-    const webinario      = calcFunnelMetrics(allDeals, funnelIds.webinario,      stageData, budgetField.key, budgetField.mqlIds, sinceTs, untilTs);
-    const social_selling = calcFunnelMetrics(allDeals, funnelIds.social_selling, stageData, budgetField.key, budgetField.mqlIds, sinceTs, untilTs);
+    const calc = idSet => calcFunnelMetrics(
+      allDeals, idSet, stageData, budgetField.key, budgetField.mqlIds, sinceTs, untilTs
+    );
+
+    const aplicacao      = calc(funnelIds.aplicacao);
+    const webinario      = calc(funnelIds.webinario);
+    const social_selling = calc(funnelIds.social_selling);
+
+    const experts = {
+      joao: {
+        aplicacao:      calc(expertIds.joao.aplicacao),
+        social_selling: calc(expertIds.joao.social_selling),
+      },
+      robson: {
+        aplicacao:      calc(expertIds.robson.aplicacao),
+        social_selling: calc(expertIds.robson.social_selling),
+      },
+    };
 
     // Total de leads no período (add_time)
     const total_leads_crm = allDeals.filter(d => {
@@ -271,11 +319,13 @@ export default async function handler(req, res) {
       webinario,
       social_selling,
       total_leads_crm,
+      experts,
       _debug: {
         stageIds:            { agendado: stageData.agendado, callRealizada: stageData.callRealizada },
         budgetFieldKey:      budgetField.key,
         mqlOptionIds:        budgetField.mqlIds,
         labelIds,
+        expertLabels:        EXPERT_LABELS,
         totalDealsNoPipeline: allDeals.length
       }
     });

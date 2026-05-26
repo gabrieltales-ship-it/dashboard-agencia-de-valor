@@ -396,22 +396,20 @@ function mergeAccounts(accounts) {
   };
 }
 
-// ─── Lê os IDs de conta das env vars (suporta múltiplas contas) ───────────────
-// META_AD_ACCOUNT_ID (principal) + META_AD_ACCOUNT_ID_2, _3, ... (opcionais)
+// ─── Experts (cada expert = uma conta de anúncios) ────────────────────────────
+// O ID vem das env vars já existentes (com fallback para os IDs conhecidos).
+//   Robson → conta principal (META_AD_ACCOUNT_ID)
+//   João   → segunda conta   (META_AD_ACCOUNT_ID_2)
 
-function getAccountIds() {
-  const ids = [
-    process.env.META_AD_ACCOUNT_ID,
-    process.env.META_AD_ACCOUNT_ID_2,
-    process.env.META_AD_ACCOUNT_ID_3,
-  ].filter(Boolean);
+const EXPERTS = [
+  { slug: 'robson', name: 'Robson', rawId: process.env.META_AD_ACCOUNT_ID   || '1075157712573443' },
+  { slug: 'joao',   name: 'João',   rawId: process.env.META_AD_ACCOUNT_ID_2 || '24634931902871157' },
+];
 
-  // Normaliza: remove espaços e qualquer prefixo act_/act= que tenha sido colado
-  // por engano, e devolve sempre no formato act_<numeros>.
-  return ids.map(raw => {
-    const clean = String(raw).trim().replace(/^act[_=\s]*/i, '');
-    return `act_${clean}`;
-  });
+// Normaliza: remove espaços e qualquer prefixo act_/act= colado por engano.
+function normalizeAccountId(raw) {
+  const clean = String(raw).trim().replace(/^act[_=\s]*/i, '');
+  return `act_${clean}`;
 }
 
 // ─── Handler principal ────────────────────────────────────────────────────────
@@ -419,11 +417,9 @@ function getAccountIds() {
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
 
-  const token      = process.env.META_TOKEN;
-  const accountIds = getAccountIds();
-
-  if (!token || accountIds.length === 0) {
-    return res.status(500).json({ error: 'META_TOKEN ou META_AD_ACCOUNT_ID não configurados' });
+  const token = process.env.META_TOKEN;
+  if (!token) {
+    return res.status(500).json({ error: 'META_TOKEN não configurado' });
   }
 
   const { since, until } = req.query;
@@ -432,30 +428,46 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Busca cada conta em paralelo. allSettled garante que uma conta com
-    // problema (ID errado, sem permissão) não derrube o painel inteiro.
+    // Busca a conta de cada expert em paralelo. allSettled garante que uma conta
+    // com problema (ID errado, sem permissão) não derrube o painel inteiro.
     const settled = await Promise.allSettled(
-      accountIds.map(id => getAccountData(id, since, until, token))
+      EXPERTS.map(e => getAccountData(normalizeAccountId(e.rawId), since, until, token))
     );
 
-    const accounts = settled.filter(s => s.status === 'fulfilled').map(s => s.value);
-    const failures = settled
-      .map((s, i) => (s.status === 'rejected' ? { adAccountId: accountIds[i], error: s.reason?.message } : null))
-      .filter(Boolean);
+    const accounts = [];   // todas as contas lidas → usadas para o Geral
+    const experts  = {};   // dados por expert (Aplicação + Social Selling)
+    const failures = [];
+
+    settled.forEach((s, i) => {
+      const e = EXPERTS[i];
+      if (s.status === 'fulfilled') {
+        accounts.push(s.value);
+        experts[e.slug] = {
+          name:           e.name,
+          aplicacao:      s.value.aplicacao,
+          social_selling: s.value.social_selling,
+        };
+      } else {
+        failures.push({ expert: e.slug, accountId: normalizeAccountId(e.rawId), error: s.reason?.message });
+      }
+    });
 
     if (accounts.length === 0) {
       throw new Error(`Nenhuma conta Meta pôde ser lida. Falhas: ${JSON.stringify(failures)}`);
     }
 
+    // Geral = soma de todas as contas (inclui Webinário compartilhado)
     const merged = mergeAccounts(accounts);
 
     return res.status(200).json({
       source: 'meta_ads',
       period: { since, until },
-      ...merged,
+      ...merged,     // geral no topo (compatível com o frontend atual)
+      experts,       // { robson: {...}, joao: {...} }
       _debug: {
         accounts: accounts.map(a => a._meta),
         failures,
+        expertMap: EXPERTS.map(e => ({ slug: e.slug, name: e.name, accountId: normalizeAccountId(e.rawId) })),
       },
     });
 
