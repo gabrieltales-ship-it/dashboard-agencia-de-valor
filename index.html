@@ -529,6 +529,8 @@
     <h1>Visão consolidada de campanhas</h1>
     <div class="topbar-right">
       <select class="period-select" id="globalPeriod" onchange="onPeriodChange(this.value)">
+        <option value="today">Hoje</option>
+        <option value="yesterday">Ontem</option>
         <option value="7">Últimos 7 dias</option>
         <option value="14">Últimos 14 dias</option>
         <option value="30">Últimos 30 dias</option>
@@ -608,43 +610,6 @@
       <div class="chart-box"><div class="chart-title">Leads e MQLs diários</div><canvas id="ca-leads" height="140"></canvas></div>
     </div>
 
-    <div class="section">
-      <div class="section-title">Campanhas — Sessão <span class="budget-total" id="apl-budget-total">Orçamento total: —</span></div>
-      <table>
-        <thead><tr><th style="width:30%">Campanha</th><th>Orç./dia</th><th>Spend</th><th>Leads</th><th>MQLs</th><th>CPL</th><th>CPMQL</th></tr></thead>
-        <tbody id="apl-camp-fixed">
-          <tr><td colspan="7" style="color:var(--av-text-muted);text-align:center;font-size:12px">Carregando dados do Meta Ads…</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="section">
-      <div class="section-title">Análise de performance — ordem: menor CPL <span id="apl-period-badge" class="manual-badge">Últimos 30 dias</span></div>
-      <div class="sub-tabs">
-        <div class="sub-tab active" onclick="showSub('apl-perf','apl-camp',this)">Campanhas</div>
-        <div class="sub-tab" onclick="showSub('apl-perf','apl-conj',this)">Conjuntos</div>
-        <div class="sub-tab" onclick="showSub('apl-perf','apl-criat',this)">Criativos</div>
-      </div>
-      <div id="apl-perf">
-        <div class="sub-panel active" id="apl-camp">
-          <table><thead><tr><th style="width:3%">#</th><th style="width:30%">Campanha</th><th>Spend</th><th>Leads</th><th>CPL</th><th>vs. média</th><th>Ação</th></tr></thead>
-          <tbody id="apl-camp-body"></tbody></table>
-        </div>
-        <div class="sub-panel" id="apl-conj">
-          <table><thead><tr><th style="width:3%">#</th><th style="width:30%">Conjunto</th><th>Spend</th><th>Leads</th><th>CPL</th><th>vs. média</th><th>Ação</th></tr></thead>
-          <tbody id="apl-conj-body"></tbody></table>
-        </div>
-        <div class="sub-panel" id="apl-criat">
-          <table><thead><tr><th style="width:3%">#</th><th style="width:30%">Criativo</th><th>Spend</th><th>Leads</th><th>CPL</th><th>vs. média</th><th>Ação</th></tr></thead>
-          <tbody id="apl-criat-body"></tbody></table>
-        </div>
-      </div>
-    </div>
-
-    <div class="demo-row">
-      <div class="chart-box"><div class="chart-title">CPL por faixa etária</div><canvas id="ca-age" height="160"></canvas></div>
-      <div class="chart-box"><div class="chart-title">Spend e CPL por gênero</div><canvas id="ca-gender" height="160"></canvas></div>
-    </div>
   </div>
 
   <!-- ===== ABA WEBINÁRIO ===== -->
@@ -679,34 +644,6 @@
       <div class="chart-box"><div class="chart-title">Leads diários</div><canvas id="cw-leads" height="140"></canvas></div>
     </div>
 
-    <div class="section">
-      <div class="section-title">Campanhas — Web <span class="budget-total" id="web-budget-total">Orçamento total: —</span></div>
-      <table>
-        <thead><tr><th style="width:28%">Campanha</th><th>Orç./dia</th><th>Spend</th><th>Leads</th><th>CPL</th><th>CTR</th><th>Impressões</th></tr></thead>
-        <tbody id="web-camp-fixed">
-          <tr><td colspan="7" style="color:var(--av-text-muted);text-align:center;font-size:12px">Carregando dados do Meta Ads…</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="section">
-      <div class="section-title">Análise de performance — ordem: menor CPL <span id="web-period-badge" class="manual-badge">Últimos 30 dias</span></div>
-      <div class="sub-tabs">
-        <div class="sub-tab active" onclick="showSub('web-perf','web-camp',this)">Campanhas</div>
-        <div class="sub-tab" onclick="showSub('web-perf','web-conj',this)">Conjuntos</div>
-        <div class="sub-tab" onclick="showSub('web-perf','web-criat',this)">Criativos</div>
-      </div>
-      <div id="web-perf">
-        <div class="sub-panel active" id="web-camp"><table><thead><tr><th style="width:3%">#</th><th style="width:30%">Campanha</th><th>Spend</th><th>Leads</th><th>CPL</th><th>vs. média</th><th>Ação</th></tr></thead><tbody id="web-camp-body"></tbody></table></div>
-        <div class="sub-panel" id="web-conj"><table><thead><tr><th style="width:3%">#</th><th style="width:30%">Conjunto</th><th>Spend</th><th>Leads</th><th>CPL</th><th>vs. média</th><th>Ação</th></tr></thead><tbody id="web-conj-body"></tbody></table></div>
-        <div class="sub-panel" id="web-criat"><table><thead><tr><th style="width:3%">#</th><th style="width:30%">Criativo</th><th>Spend</th><th>Leads</th><th>CPL</th><th>vs. média</th><th>Ação</th></tr></thead><tbody id="web-criat-body"></tbody></table></div>
-      </div>
-    </div>
-
-    <div class="demo-row">
-      <div class="chart-box"><div class="chart-title">CPL por faixa etária</div><canvas id="cw-age" height="160"></canvas></div>
-      <div class="chart-box"><div class="chart-title">Spend e CPL por gênero</div><canvas id="cw-gender" height="160"></canvas></div>
-    </div>
   </div>
 
   <!-- ===== ABA SOCIAL SELLING ===== -->
@@ -741,34 +678,6 @@
       <div class="chart-box"><div class="chart-title">Custo/seguidor ao longo do tempo</div><canvas id="cs-cps" height="140"></canvas></div>
     </div>
 
-    <div class="section">
-      <div class="section-title">Campanhas — Tráfego <span class="budget-total" id="soc-budget-total">Orçamento total: —</span></div>
-      <table>
-        <thead><tr><th style="width:28%">Campanha</th><th>Orç./dia</th><th>Spend</th><th>Seguidores</th><th>Custo/seg.</th><th>Alcance</th></tr></thead>
-        <tbody id="soc-camp-fixed">
-          <tr><td colspan="6" style="color:var(--av-text-muted);text-align:center;font-size:12px">Carregando dados do Meta Ads…</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="section">
-      <div class="section-title">Análise de performance — ordem: menor custo/seguidor <span id="soc-period-badge" class="manual-badge">Últimos 30 dias</span></div>
-      <div class="sub-tabs">
-        <div class="sub-tab active" onclick="showSub('soc-perf','soc-camp',this)">Campanhas</div>
-        <div class="sub-tab" onclick="showSub('soc-perf','soc-conj',this)">Conjuntos</div>
-        <div class="sub-tab" onclick="showSub('soc-perf','soc-criat',this)">Criativos</div>
-      </div>
-      <div id="soc-perf">
-        <div class="sub-panel active" id="soc-camp"><table><thead><tr><th style="width:3%">#</th><th style="width:30%">Campanha</th><th>Spend</th><th>Seguidores</th><th>Custo/seg.</th><th>vs. média</th><th>Ação</th></tr></thead><tbody id="soc-camp-body"></tbody></table></div>
-        <div class="sub-panel" id="soc-conj"><table><thead><tr><th style="width:3%">#</th><th style="width:30%">Conjunto</th><th>Spend</th><th>Seguidores</th><th>Custo/seg.</th><th>vs. média</th><th>Ação</th></tr></thead><tbody id="soc-conj-body"></tbody></table></div>
-        <div class="sub-panel" id="soc-criat"><table><thead><tr><th style="width:3%">#</th><th style="width:30%">Criativo</th><th>Spend</th><th>Seguidores</th><th>Custo/seg.</th><th>vs. média</th><th>Ação</th></tr></thead><tbody id="soc-criat-body"></tbody></table></div>
-      </div>
-    </div>
-
-    <div class="demo-row">
-      <div class="chart-box"><div class="chart-title">Custo/seguidor por faixa etária</div><canvas id="cs-age" height="160"></canvas></div>
-      <div class="chart-box"><div class="chart-title">Spend e custo/seguidor por gênero</div><canvas id="cs-gender" height="160"></canvas></div>
-    </div>
   </div>
 
   <!-- ===== ABA GERAL + CRM ===== -->
@@ -831,6 +740,16 @@
     const today = new Date();
     const fmt = d => d.toISOString().split('T')[0];
 
+    if (val === 'today') {
+      const d = fmt(today);
+      return { since: d, until: d };
+    }
+    if (val === 'yesterday') {
+      const y = new Date(today);
+      y.setDate(y.getDate() - 1);
+      const d = fmt(y);
+      return { since: d, until: d };
+    }
     if (val === 'month') {
       const since = fmt(new Date(today.getFullYear(), today.getMonth(), 1));
       const until = fmt(today);
@@ -1230,9 +1149,9 @@
       webinario:      { ...ZERO_META },
       experts:        meta.experts,
     };
-    // A planilha (presentes/abordados) não separa por expert → some na visão de expert
-    const sheetsView = { webinario: { leads:0, presentes:0 }, social_selling: { abordados:0, seguidores:0 } };
-    return { crm: crmView, meta: metaView, sheets: sheetsView };
+    // A planilha é única (não separada por expert) → mantém os dados reais
+    // (Social Selling puxa abordados/seguidores da mesma planilha em qualquer visão)
+    return { crm: crmView, meta: metaView, sheets: _data.sheets };
   }
 
   // Aplica a visão ativa em toda a tela
@@ -1359,6 +1278,8 @@
   const currentYear = new Date().getFullYear();
 
   const periodLabels = {
+    'today': 'Hoje',
+    'yesterday': 'Ontem',
     '7': 'Últimos 7 dias',
     '14': 'Últimos 14 dias',
     '30': 'Últimos 30 dias',
