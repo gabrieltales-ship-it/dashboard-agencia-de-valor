@@ -502,6 +502,13 @@
     }
     .card.receita-card .card-label { color: #FC8338; }
     .card.receita-card .card-value { color: #FC8338; }
+  /* ── Seletor de expert ── */
+  .expert-bar{display:flex;align-items:center;gap:12px;margin:0 0 16px;flex-wrap:wrap;}
+  .expert-bar-label{font-size:11px;color:var(--av-text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;}
+  .expert-seg{display:inline-flex;background:var(--av-surface);border:1px solid var(--av-border);border-radius:var(--av-radius-btn);overflow:hidden;}
+  .expert-opt{background:transparent;border:none;color:var(--av-text-secondary);font-family:var(--av-font);font-size:13px;font-weight:600;padding:8px 18px;cursor:pointer;transition:background .15s,color .15s;}
+  .expert-opt:hover{color:var(--av-text-primary);}
+  .expert-opt.active{background:var(--av-gradient-cta);color:#fff;}
   </style>
 </head>
 <body>
@@ -542,11 +549,20 @@
     </div>
   </div>
 
+  <div class="expert-bar">
+    <span class="expert-bar-label">Visão</span>
+    <div class="expert-seg">
+      <button class="expert-opt active" data-view="geral"  onclick="showExpert('geral',this)">Geral</button>
+      <button class="expert-opt"        data-view="robson" onclick="showExpert('robson',this)">Robson</button>
+      <button class="expert-opt"        data-view="joao"   onclick="showExpert('joao',this)">João</button>
+    </div>
+  </div>
+
   <div class="tabs">
-    <div class="tab active" onclick="showTab('apl',this)">Aplicação</div>
-    <div class="tab" onclick="showTab('web',this)">Webinário</div>
-    <div class="tab" onclick="showTab('soc',this)">Social Selling</div>
-    <div class="tab" onclick="showTab('ger',this)">Visão Geral + CRM</div>
+    <div class="tab active" data-tab="apl" onclick="showTab('apl',this)">Aplicação</div>
+    <div class="tab" id="tab-web" data-tab="web" onclick="showTab('web',this)">Webinário</div>
+    <div class="tab" data-tab="soc" onclick="showTab('soc',this)">Social Selling</div>
+    <div class="tab" data-tab="ger" onclick="showTab('ger',this)">Visão Geral + CRM</div>
   </div>
 
   <!-- ===== ABA APLICAÇÃO ===== -->
@@ -861,6 +877,10 @@
   let _aplDailyLeads      = null;
   let _aplAgeBreakdown    = null;
   let _aplGenderBreakdown = null;
+
+  // Estado da visão por expert: guarda as respostas completas e a fatia ativa
+  let _data = { crm: null, sheets: null, meta: null };
+  let _view = 'geral'; // 'geral' | 'robson' | 'joao'
 
   // Atualiza cards com dados reais do Meta Ads
   function applyMetaData(meta, crmData) {
@@ -1182,44 +1202,125 @@
     }
   }
 
-  async function refreshDash() {
-    const btn = document.getElementById('btnRefresh');
-    btn.classList.add('loading');
-    btn.textContent = '↻ Atualizando...';
+  // ── Visão por expert ────────────────────────────────────────────────────────
+  // Funis "zerados" usados para Webinário (e planilha) quando um expert está
+  // selecionado — o Webinário é compartilhado e só aparece no Geral.
+  const ZERO_CRM  = { leads:0, mqls:0, calls_agendadas:0, calls_realizadas:0, vendas:0, receita:0, wonList:[], daily:[] };
+  const ZERO_META = { spend:0, leads:0, mqls:0, seguidores:0, campaigns:[], adsets:[], ads:[], daily:[], age_breakdown:[], gender_breakdown:[] };
 
-    const period = document.getElementById('globalPeriod').value;
+  // Monta os objetos {crm, meta, sheets} conforme a visão ativa.
+  // Geral → dados completos; expert → fatia do expert (Webinário/planilha zerados).
+  function composeView(view) {
+    const { crm, meta, sheets } = _data;
+    if (view === 'geral' || !crm?.experts || !meta?.experts) {
+      return { crm, meta, sheets };
+    }
+    const ce = crm.experts[view]  || {};
+    const me = meta.experts[view] || {};
+    const crmView = {
+      aplicacao:       ce.aplicacao      || { ...ZERO_CRM },
+      social_selling:  ce.social_selling || { ...ZERO_CRM },
+      webinario:       { ...ZERO_CRM },
+      total_leads_crm: (ce.aplicacao?.leads || 0) + (ce.social_selling?.leads || 0),
+      experts:         crm.experts,
+    };
+    const metaView = {
+      aplicacao:      me.aplicacao      || { ...ZERO_META },
+      social_selling: me.social_selling || { ...ZERO_META },
+      webinario:      { ...ZERO_META },
+      experts:        meta.experts,
+    };
+    // A planilha (presentes/abordados) não separa por expert → some na visão de expert
+    const sheetsView = { webinario: { leads:0, presentes:0 }, social_selling: { abordados:0, seguidores:0 } };
+    return { crm: crmView, meta: metaView, sheets: sheetsView };
+  }
+
+  // Aplica a visão ativa em toda a tela
+  function applyAll() {
+    const { crm, meta, sheets } = composeView(_view);
+    if (crm)    applyPipedriveData(crm);
+    if (sheets) applySheetData(sheets, crm);
+    if (meta)   applyMetaData(meta, crm);
+    toggleWebinarioTab(_view === 'geral');
+    renderAllPerf(document.getElementById('globalPeriod')?.value || 'month');
+  }
+
+  function toggleWebinarioTab(show) {
+    const tab = document.getElementById('tab-web');
+    if (tab) tab.style.display = show ? '' : 'none';
+    // Se a aba Webinário estava ativa e vamos escondê-la, volta para Aplicação
+    if (!show && document.getElementById('web')?.classList.contains('active')) {
+      const aplTab = document.querySelector('.tab[data-tab="apl"]');
+      if (aplTab) showTab('apl', aplTab);
+    }
+  }
+
+  function showExpert(view, el) {
+    _view = view;
+    document.querySelectorAll('.expert-opt').forEach(b => b.classList.remove('active'));
+    if (el) el.classList.add('active');
+    applyAll();
+  }
+
+  // ── Carregamento via /api/data (cache instantâneo + refresh em background) ────
+  async function fetchData(period, since, until, refresh) {
+    const url = `/api/data?period=${period}&since=${since}&until=${until}${refresh ? '&refresh=1' : ''}`;
+    const res  = await fetch(url);
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+    return json; // { cached, updated_at, data: { pipedrive, meta, sheets, errors } }
+  }
+
+  function storeAndApply(payload) {
+    const d = payload.data || {};
+    _data = { crm: d.pipedrive || null, sheets: d.sheets || null, meta: d.meta || null };
+    applyAll();
+    setUpdated(payload);
+  }
+
+  function setUpdated(payload) {
+    const el = document.getElementById('lastUpdate');
+    if (!el) return;
+    const dt = payload.updated_at ? new Date(payload.updated_at) : new Date();
+    const quando = dt.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+    el.textContent = (payload.cached ? 'Cache de ' : 'Atualizado ') + quando;
+  }
+
+  async function loadDash(period) {
     const { since, until } = getPeriodDates(period);
+    const btn = document.getElementById('btnRefresh');
+    if (btn) { btn.classList.add('loading'); btn.textContent = '↻ Atualizando...'; }
 
-    // Reseta dados de gráfico para não mostrar período anterior ao trocar filtro
+    // Reseta dados de gráfico para não misturar período anterior
     _aplDailySpend = null; _aplDailyLeads = null;
     _aplAgeBreakdown = null; _aplGenderBreakdown = null;
 
+    const done = () => { if (btn) { btn.classList.remove('loading'); btn.textContent = '↻ Atualizar Dash'; } };
+
     try {
-      // Busca Pipedrive, Sheets e Meta em paralelo
-      const [crmData, sheetsData, metaData] = await Promise.allSettled([
-        fetchPipedrive(since, until),
-        fetchSheets(since, until),
-        fetchMeta(since, until)
-      ]);
+      // 1. Cache instantâneo (rápido)
+      const first = await fetchData(period, since, until, false);
+      storeAndApply(first);
 
-      if (crmData.status === 'fulfilled') applyPipedriveData(crmData.value);
-      else console.error('Pipedrive:', crmData.reason?.message);
-
-      if (sheetsData.status === 'fulfilled') applySheetData(sheetsData.value, crmData.value);
-      else console.warn('Sheets ainda não configurado:', sheetsData.reason?.message);
-
-      if (metaData.status === 'fulfilled') applyMetaData(metaData.value, crmData.value);
-      else console.error('Meta Ads:', metaData.reason?.message);
-
-      renderAllPerf(period);
-      updateTimestamp();
+      // 2. Se veio do cache, dispara um refresh em background para trazer o dado
+      //    fresco e atualizar a tela. Se já veio fresco (cache vazio), não repete.
+      if (first.cached) {
+        fetchData(period, since, until, true)
+          .then(fresh => storeAndApply(fresh))
+          .catch(err => console.warn('Refresh em background falhou:', err.message))
+          .finally(done);
+      } else {
+        done();
+      }
     } catch (err) {
-      console.error('Erro ao atualizar dados:', err.message);
-      alert('Erro ao atualizar dados: ' + err.message);
-    } finally {
-      btn.classList.remove('loading');
-      btn.textContent = '↻ Atualizar Dash';
+      console.error('Erro ao carregar dados:', err.message);
+      done();
     }
+  }
+
+  // Botão "Atualizar Dash" — recarrega o período atual
+  function refreshDash() {
+    loadDash(document.getElementById('globalPeriod')?.value || 'month');
   }
 
   // Seletor de período personalizado
@@ -1283,7 +1384,7 @@
       const b = document.getElementById(k + '-period-badge');
       if (b) b.textContent = label;
     });
-    renderAllPerf(val);
+    loadDash(val); // recarrega os dados do novo período
   }
 
   const baseChartOpts = {
@@ -1582,22 +1683,8 @@
 
   renderAllPerf('month');
 
-  // Carrega dados reais ao abrir o dashboard
-  (async () => {
-    const { since, until } = getPeriodDates('month');
-    const [crmResult, sheetsResult, metaResult] = await Promise.allSettled([
-      fetchPipedrive(since, until),
-      fetchSheets(since, until),
-      fetchMeta(since, until)
-    ]);
-    if (crmResult.status   === 'fulfilled') applyPipedriveData(crmResult.value);
-    else console.error('Pipedrive:', crmResult.reason?.message);
-    if (sheetsResult.status === 'fulfilled') applySheetData(sheetsResult.value, crmResult.value);
-    else console.warn('Sheets:', sheetsResult.reason?.message);
-    if (metaResult.status  === 'fulfilled') applyMetaData(metaResult.value, crmResult.value);
-    else console.error('Meta Ads:', metaResult.reason?.message);
-    updateTimestamp();
-  })();
+  // Carrega dados reais ao abrir o dashboard (cache instantâneo + refresh em background)
+  loadDash(document.getElementById('globalPeriod')?.value || 'month');
 </script>
 </body>
 </html>
