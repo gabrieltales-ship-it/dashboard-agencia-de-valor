@@ -23,7 +23,9 @@ async function pdGet(path, token, params = {}) {
   const res = await fetch(pdUrl(path, params), {
     headers: { 'x-api-token': token, Accept: 'application/json' }
   });
-  return res.json();
+  const json = await res.json().catch(() => ({}));
+  json._http = res.status;
+  return json;
 }
 
 // ─── Helper: busca todas as páginas de um endpoint ───────────────────────────
@@ -54,7 +56,8 @@ async function getPipelineId(token) {
   const p = pipelines.find(p => p.name?.trim().toLowerCase() === 'comercial');
   if (!p) {
     const found = pipelines.map(p => `"${p.name}"`).join(', ') || '(nenhum)';
-    throw new Error(`Pipeline "Comercial" não encontrado. Pipelines visíveis para este token: ${found}`);
+    const diag = `HTTP ${json._http}; success=${json.success}; api_error=${JSON.stringify(json.error ?? json.error_info ?? null)}`;
+    throw new Error(`Pipeline "Comercial" não encontrado. Pipelines visíveis: ${found}. [diag: ${diag}]`);
   }
   return p.id;
 }
