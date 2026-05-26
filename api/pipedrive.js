@@ -52,12 +52,17 @@ async function fetchAll(path, token, extraParams = {}) {
 
 async function getPipelineId(token) {
   const json = await pdGet('/pipelines', token);
+
+  // Token inválido/expirado: o Pipedrive responde 401 "unauthorized access".
+  if (json._http === 401 || json.success === false) {
+    throw new Error(`Pipedrive rejeitou o token (HTTP ${json._http}: ${json.error || 'unauthorized'}). Atualize PIPEDRIVE_TOKEN no Vercel.`);
+  }
+
   const pipelines = json.data || [];
   const p = pipelines.find(p => p.name?.trim().toLowerCase() === 'comercial');
   if (!p) {
     const found = pipelines.map(p => `"${p.name}"`).join(', ') || '(nenhum)';
-    const diag = `HTTP ${json._http}; success=${json.success}; api_error=${JSON.stringify(json.error ?? json.error_info ?? null)}`;
-    throw new Error(`Pipeline "Comercial" não encontrado. Pipelines visíveis: ${found}. [diag: ${diag}]`);
+    throw new Error(`Pipeline "Comercial" não encontrado. Pipelines visíveis para este token: ${found}`);
   }
   return p.id;
 }
